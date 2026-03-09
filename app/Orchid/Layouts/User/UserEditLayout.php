@@ -6,6 +6,7 @@ namespace App\Orchid\Layouts\User;
 
 use Orchid\Screen\Field;
 use Orchid\Screen\Fields\Input;
+use Orchid\Screen\Fields\Picture;
 use Orchid\Screen\Layouts\Rows;
 
 class UserEditLayout extends Rows
@@ -18,6 +19,10 @@ class UserEditLayout extends Rows
     public function fields(): array
     {
         return [
+            Picture::make('user.avatar')
+                ->title('Avatar')
+                ->targetRelativeUrl(),
+
             Input::make('user.name')
                 ->type('text')
                 ->max(255)

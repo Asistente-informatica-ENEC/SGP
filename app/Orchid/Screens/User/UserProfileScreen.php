@@ -1,6 +1,7 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1)
+;
 
 namespace App\Orchid\Screens\User;
 
@@ -38,7 +39,7 @@ class UserProfileScreen extends Screen
      */
     public function name(): ?string
     {
-        return 'My Account';
+        return 'Mi Cuenta';
     }
 
     /**
@@ -46,7 +47,7 @@ class UserProfileScreen extends Screen
      */
     public function description(): ?string
     {
-        return 'Update your account details such as name, email address and password';
+        return 'Actualiza los detalles de tu cuenta como nombre, correo electrónico y contraseña.';
     }
 
     /**
@@ -58,15 +59,15 @@ class UserProfileScreen extends Screen
     {
         return [
             Button::make('Back to my account')
-                ->novalidate()
-                ->canSee(Impersonation::isSwitch())
-                ->icon('bs.people')
-                ->route('platform.switch.logout'),
+            ->novalidate()
+            ->canSee(Impersonation::isSwitch())
+            ->icon('bs.people')
+            ->route('platform.switch.logout'),
 
             Button::make('Sign out')
-                ->novalidate()
-                ->icon('bs.box-arrow-left')
-                ->route('platform.logout'),
+            ->novalidate()
+            ->icon('bs.box-arrow-left')
+            ->route('platform.logout'),
         ];
     }
 
@@ -77,34 +78,35 @@ class UserProfileScreen extends Screen
     {
         return [
             Layout::block(UserEditLayout::class)
-                ->title(__('Profile Information'))
-                ->description(__("Update your account's profile information and email address."))
-                ->commands(
-                    Button::make(__('Save'))
-                        ->type(Color::BASIC())
-                        ->icon('bs.check-circle')
-                        ->method('save')
-                ),
+            ->title(__('Profile Information'))
+            ->description(__("Update your account's profile information and email address."))
+            ->commands(
+            Button::make(__('Save'))
+            ->type(Color::BASIC())
+            ->icon('bs.check-circle')
+            ->method('save')
+        ),
 
             Layout::block(ProfilePasswordLayout::class)
-                ->title(__('Update Password'))
-                ->description(__('Ensure your account is using a long, random password to stay secure.'))
-                ->commands(
-                    Button::make(__('Update password'))
-                        ->type(Color::BASIC())
-                        ->icon('bs.check-circle')
-                        ->method('changePassword')
-                ),
+            ->title(__('Actualizar Contraseña'))
+            ->description(__('Asegurese su cuenta usando una contraseña larga y/o aleatoria por seguridad.'))
+            ->commands(
+            Button::make(__('Update password'))
+            ->type(Color::BASIC())
+            ->icon('bs.check-circle')
+            ->method('changePassword')
+        ),
         ];
     }
 
     public function save(Request $request): void
     {
         $request->validate([
-            'user.name'  => 'required|string',
+            'user.name' => 'required|string',
+            'user.avatar' => 'string|nullable',
             'user.email' => [
                 'required',
-                Rule::unique(User::class, 'email')->ignore($request->user()),
+                Rule::unique(User::class , 'email')->ignore($request->user()),
             ],
         ]);
 
@@ -112,21 +114,21 @@ class UserProfileScreen extends Screen
             ->fill($request->get('user'))
             ->save();
 
-        Toast::info(__('Profile updated.'));
+        Toast::info('Perfil actualizado correctamente.');
     }
 
     public function changePassword(Request $request): void
     {
         $guard = config('platform.guard', 'web');
         $request->validate([
-            'old_password' => 'required|current_password:'.$guard,
-            'password'     => 'required|confirmed|different:old_password',
+            'old_password' => 'required|current_password:' . $guard,
+            'password' => 'required|confirmed|different:old_password',
         ]);
 
         tap($request->user(), function ($user) use ($request) {
             $user->password = Hash::make($request->get('password'));
         })->save();
 
-        Toast::info(__('Password changed.'));
+        Toast::info('Contraseña cambiada correctamente.');
     }
 }

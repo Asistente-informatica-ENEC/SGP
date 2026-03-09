@@ -48,7 +48,7 @@ class UserEditScreen extends Screen
      */
     public function name(): ?string
     {
-        return $this->user->exists ? 'Edit User' : 'Create User';
+        return $this->user->exists ? 'Editar Usuario' : 'Crear Usuario';
     }
 
     /**
@@ -56,7 +56,7 @@ class UserEditScreen extends Screen
      */
     public function description(): ?string
     {
-        return 'User profile and privileges, including their associated role.';
+        return 'Perfil del usuario y privilegios, incluyendo su rol asociado.';
     }
 
     public function permission(): ?iterable
@@ -174,7 +174,7 @@ class UserEditScreen extends Screen
 
         $user->replaceRoles($request->input('user.roles'));
 
-        Toast::info(__('User was saved.'));
+        Toast::info('Usuario guardado correctamente.');
 
         return redirect()->route('platform.systems.users');
     }
@@ -188,7 +188,7 @@ class UserEditScreen extends Screen
     {
         $user->delete();
 
-        Toast::info(__('User was removed'));
+        Toast::info('Usuario eliminado correctamente.');
 
         return redirect()->route('platform.systems.users');
     }
@@ -200,7 +200,7 @@ class UserEditScreen extends Screen
     {
         Impersonation::loginAs($user);
 
-        Toast::info(__('You are now impersonating this user'));
+        Toast::info('Ahora estás personificando a este usuario.');
 
         return redirect()->route(config('platform.index'));
     }
