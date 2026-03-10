@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Orchid\Screens\Asset\AssetEditScreen;
+use App\Orchid\Screens\Asset\AssetListScreen;
+use App\Orchid\Screens\Position\PositionEditScreen;
+use App\Orchid\Screens\Position\PositionListScreen;
+use App\Orchid\Screens\CivilServant\CivilServantEditScreen;
+use App\Orchid\Screens\CivilServant\CivilServantListScreen;
 use App\Orchid\Screens\Examples\ExampleActionsScreen;
 use App\Orchid\Screens\Examples\ExampleCardsScreen;
 use App\Orchid\Screens\Examples\ExampleChartsScreen;
@@ -100,5 +106,68 @@ Route::screen('/examples/layouts', ExampleLayoutsScreen::class)->name('platform.
 Route::screen('/examples/grid', ExampleGridScreen::class)->name('platform.example.grid');
 Route::screen('/examples/charts', ExampleChartsScreen::class)->name('platform.example.charts');
 Route::screen('/examples/cards', ExampleCardsScreen::class)->name('platform.example.cards');
+
+// Platform > Funcionarios
+Route::screen('civil_servants', CivilServantListScreen::class)
+    ->name('platform.civil_servant.list')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Funcionarios', route('platform.civil_servant.list')));
+
+// Platform > Funcionarios > Editar
+Route::screen('civil_servants/{civilServant}/edit', CivilServantEditScreen::class)
+    ->name('platform.civil_servant.edit')
+    ->breadcrumbs(fn (Trail $trail, $civilServant) => $trail
+        ->parent('platform.civil_servant.list')
+        ->push('Editar', route('platform.civil_servant.edit', $civilServant)));
+
+// Platform > Funcionarios > Crear
+Route::screen('civil_servants/create', CivilServantEditScreen::class)
+    ->name('platform.civil_servant.create')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.civil_servant.list')
+        ->push('Crear', route('platform.civil_servant.create')));
+
+// Platform > Bienes
+Route::screen('assets', AssetListScreen::class)
+    ->name('platform.asset.list')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Bienes', route('platform.asset.list')));
+
+// Platform > Bienes > Editar
+Route::screen('assets/{asset}/edit', AssetEditScreen::class)
+    ->name('platform.asset.edit')
+    ->breadcrumbs(fn (Trail $trail, $asset) => $trail
+        ->parent('platform.asset.list')
+        ->push('Editar', route('platform.asset.edit', $asset)));
+
+// Platform > Bienes > Crear
+Route::screen('assets/create', AssetEditScreen::class)
+    ->name('platform.asset.create')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.asset.list')
+        ->push('Crear', route('platform.asset.create')));
+
+// Platform > Cargos
+Route::screen('positions', PositionListScreen::class)
+    ->name('platform.position.list')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Cargos', route('platform.position.list')));
+
+// Platform > Cargos > Editar
+Route::screen('positions/{position}/edit', PositionEditScreen::class)
+    ->name('platform.position.edit')
+    ->breadcrumbs(fn (Trail $trail, $position) => $trail
+        ->parent('platform.position.list')
+        ->push('Editar', route('platform.position.edit', $position)));
+
+// Platform > Cargos > Crear
+Route::screen('positions/create', PositionEditScreen::class)
+    ->name('platform.position.create')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.position.list')
+        ->push('Crear', route('platform.position.create')));
 
 // Route::screen('idea', Idea::class, 'platform.screens.idea');

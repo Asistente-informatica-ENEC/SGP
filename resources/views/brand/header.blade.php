@@ -46,7 +46,7 @@
         </div>
     
         <p class="my-0 fw-bold">
-            Sistema de Gestión Patrimonial
+            Sistema de Control Patrimonial
         </p>
     </div>
 </div>

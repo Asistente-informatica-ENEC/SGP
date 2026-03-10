@@ -15,7 +15,7 @@
             </div>
             
             <h1 class="text-black text-4xl md:text-5xl font-bold mb-8 drop-shadow-md">
-                Sistema de Gestión Patrimonial
+                Sistema de Control Patrimonial
             </h1>
             
             <a href="{{ route('platform.login') }}" class="inline-block bg-white text-[#97E6E6] px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 hover:scale-105 transition-all shadow-lg">
