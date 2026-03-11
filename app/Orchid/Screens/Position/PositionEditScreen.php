@@ -52,6 +52,7 @@ class PositionEditScreen extends Screen
             Button::make('Eliminar')
                 ->icon('bs.trash')
                 ->method('remove')
+                ->confirm('¿Está seguro de que desea eliminar este cargo del catálogo institucional?')
                 ->canSee($this->position->exists),
         ];
     }

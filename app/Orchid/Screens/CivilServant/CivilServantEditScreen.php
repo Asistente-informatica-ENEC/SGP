@@ -52,6 +52,7 @@ class CivilServantEditScreen extends Screen
             Button::make('Eliminar')
                 ->icon('bs.trash')
                 ->method('remove')
+                ->confirm('¿Está seguro de que desea eliminar a este funcionario? Se perderán todas sus vinculaciones.')
                 ->canSee($this->civilServant->exists),
         ];
     }

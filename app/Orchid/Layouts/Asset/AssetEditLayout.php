@@ -40,24 +40,34 @@ class AssetEditLayout extends Rows
 
             Select::make('asset.state')
                 ->options([
-                    'disponible' => 'Disponible',
-                    'asignado'   => 'Asignado',
-                    'de baja'    => 'De Baja',
-                    'en reparación' => 'En Reparación',
+                    'DISPONIBLE'    => 'DISPONIBLE',
+                    'ASIGNADO'      => 'ASIGNADO',
+                    'DE BAJA'       => 'DE BAJA',
+                    'EN MAL ESTADO' => 'EN MAL ESTADO',
+                    'SUSTRAÍDO'     => 'SUSTRAÍDO',
                 ])
                 ->required()
                 ->title('Estado Actual'),
 
-            Input::make('asset.category')
-                ->type('text')
+            Select::make('asset.category')
+                ->options([
+                    'DE PRODUCCIÓN' => 'DE PRODUCCIÓN',
+                    'DE OFICINA Y MUEBLES' => 'DE OFICINA Y MUEBLES',
+                    'MÉDICO SANITARIO Y DE LABORATORIO' => 'MÉDICO SANITARIO Y DE LABORATORIO',
+                    'EDUCACIONAL, CULTURAL Y RECREATIVO' => 'EDUCACIONAL, CULTURAL Y RECREATIVO',
+                    'DE TRANSPORTE, TRACCIÓN Y ELEVACIÓN' => 'DE TRANSPORTE, TRACCIÓN Y ELEVACIÓN',
+                    'DE COMUNICACIONES' => 'DE COMUNICACIONES',
+                    'EQUIPO DE COMPUTO' => 'EQUIPO DE COMPUTO',
+                    'OTROS ACTIVOS' => 'OTROS ACTIVOS',
+                ])
                 ->required()
-                ->title('Categoría')
-                ->placeholder('Ej. Equipo de Cómputo, Mobiliario'),
+                ->title('Categoría'),
 
             DateTimer::make('asset.date')
                 ->format('Y-m-d')
                 ->required()
-                ->title('Fecha de Alta en Inventario'),
+                ->title('Fecha de Alta en Inventario')
+                ->placeholder('Seleccione fecha...'),
         ];
     }
 }

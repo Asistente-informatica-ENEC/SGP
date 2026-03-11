@@ -35,14 +35,17 @@ class AssetListLayout extends Table
 
             TD::make('description', 'Descripción')
                 ->sort()
+                ->style('text-align: justify')
                 ->filter(TD::FILTER_TEXT),
 
             TD::make('value', 'Valor')
                 ->sort()
+                ->width('150px')
                 ->render(fn (Asset $asset) => 'Q ' . number_format($asset->value, 2)),
 
             TD::make('state', 'Estado')
                 ->sort()
+                ->width('150px')
                 ->filter(TD::FILTER_TEXT),
 
             TD::make('category', 'Categoría')
@@ -51,6 +54,7 @@ class AssetListLayout extends Table
                 
             TD::make('date', 'Fecha de Alta')
                 ->sort()
+                ->width('150px')
                 ->render(fn (Asset $asset) => $asset->date ? \Carbon\Carbon::parse($asset->date)->toDateString() : ''),
         ];
     }

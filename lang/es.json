@@ -225,5 +225,10 @@
     "Web Server is Down": "El servidor web está caído",
     "Whoops!": "¡Ups!",
     "Yes": "Sí",
-    "You are receiving this email because we received a password reset request for your account.": "Ha recibido este mensaje porque se solicitó un restablecimiento de contraseña para su cuenta."
+    "You are receiving this email because we received a password reset request for your account.": "Ha recibido este mensaje porque se solicitó un restablecimiento de contraseña para su cuenta.",
+    "There's no data to be displayed": "No hay datos para mostrar",
+    "Empty": "Vacío",
+    "No results found": "No se encontraron resultados",
+    "No results found for your current filters": "No se encontraron resultados para los filtros actuales",
+    "Try adjusting your filter settings or removing it altogether to see more data": "Intente ajustar la configuración del filtro o elimínelo por completo para ver más datos"
 }

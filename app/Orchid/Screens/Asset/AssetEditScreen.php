@@ -52,6 +52,7 @@ class AssetEditScreen extends Screen
             Button::make('Eliminar')
                 ->icon('bs.trash')
                 ->method('remove')
+                ->confirm('¿Está seguro de que desea eliminar este bien del sistema? Esta acción no se puede deshacer.')
                 ->canSee($this->asset->exists),
         ];
     }

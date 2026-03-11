@@ -12,19 +12,23 @@ class SgpBaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Crear algunos cargos primero
+        $puesto1 = \App\Models\Position::firstOrCreate(['name' => 'Secretario Administrativo']);
+        $puesto2 = \App\Models\Position::firstOrCreate(['name' => 'Técnico de Bodega']);
+
         \App\Models\CivilServant::create([
             'name' => 'Juan Pérez',
-            'dpi' => '1234567890101',
+            'sede' => 'Sede Central',
             'nit' => '1234567-8',
-            'role' => 'Secretario Administrativo',
+            'position_id' => $puesto1->id,
             'unit' => 'Dirección General'
         ]);
 
         \App\Models\CivilServant::create([
             'name' => 'Maria López',
-            'dpi' => '9876543210101',
+            'sede' => 'Sede Regional Sur',
             'nit' => '8765432-1',
-            'role' => 'Técnico de Bodega',
+            'position_id' => $puesto2->id,
             'unit' => 'Departamento de Compras'
         ]);
 
@@ -32,8 +36,8 @@ class SgpBaseSeeder extends Seeder
             'sicoin' => 'S-001-A',
             'description' => 'Computadora Dell Latitude 5420, i7 16GB RAM',
             'value' => 8500.50,
-            'state' => 'disponible',
-            'category' => 'Equipo de Cómputo',
+            'state' => 'DISPONIBLE',
+            'category' => 'EQUIPO DE COMPUTO',
             'date' => now()
         ]);
 
@@ -41,8 +45,8 @@ class SgpBaseSeeder extends Seeder
             'sicoin' => 'S-001-B',
             'description' => 'Escritorio de Madera de Cedro, 3 gavetas',
             'value' => 2500.00,
-            'state' => 'disponible',
-            'category' => 'Mobiliario',
+            'state' => 'EN MAL ESTADO',
+            'category' => 'DE OFICINA Y MUEBLES',
             'date' => now()
         ]);
     }
