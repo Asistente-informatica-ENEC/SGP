@@ -55,7 +55,7 @@ class AssetListLayout extends Table
             TD::make('date', 'Fecha de Alta')
                 ->sort()
                 ->width('150px')
-                ->render(fn (Asset $asset) => $asset->date ? \Carbon\Carbon::parse($asset->date)->toDateString() : ''),
+                ->render(fn (Asset $asset) => $asset->date ? \Carbon\Carbon::parse($asset->date)->format('d-m-Y') : ''),
         ];
     }
 }

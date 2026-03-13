@@ -14,6 +14,10 @@ use Orchid\Screen\Fields\Input;
 use Orchid\Screen\Fields\Group;
 use Orchid\Support\Color;
 
+use App\Imports\CivilServantImport;
+use App\Exports\CivilServantTemplateExport;
+use Maatwebsite\Excel\Facades\Excel;
+
 class CivilServantListScreen extends Screen
 {
     /**
@@ -39,6 +43,21 @@ class CivilServantListScreen extends Screen
     public function commandBar(): iterable
     {
         return [
+            Button::make('Exportar PDF')
+                ->icon('bs.file-pdf')
+                ->method('exportPdf')
+                ->rawClick(),
+
+            Button::make('Descargar Plantilla')
+                ->method('downloadTemplate')
+                ->icon('bs.download')
+                ->rawClick(),
+
+            \Orchid\Screen\Actions\ModalToggle::make('Importar Excel')
+                ->modal('importModal')
+                ->method('import')
+                ->icon('bs.upload'),
+
             Link::make('Crear Nuevo')
                 ->icon('bs.plus-circle')
                 ->route('platform.civil_servant.create'),
@@ -73,6 +92,17 @@ class CivilServantListScreen extends Screen
                         ->type(Color::SECONDARY),
                 ])->alignEnd(),
             ]),
+
+            Layout::modal('importModal', Layout::rows([
+                Input::make('importFile')
+                    ->type('file')
+                    ->required()
+                    ->title('Archivo Excel')
+                    ->help('Seleccione el archivo .xlsx o .csv con el listado de funcionarios.'),
+            ]))
+                ->title('Importar Funcionarios desde Excel')
+                ->applyButton('Empezar Importación'),
+
             \App\Orchid\Layouts\CivilServant\CivilServantListLayout::class
         ];
     }
@@ -102,5 +132,47 @@ class CivilServantListScreen extends Screen
     public function clearFilter()
     {
         return redirect()->route('platform.civil_servant.list');
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new CivilServantTemplateExport, 'plantilla_funcionarios.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'importFile' => 'required|file|mimes:xlsx,xls,csv',
+        ]);
+
+        $import = new CivilServantImport();
+        Excel::import($import, $request->file('importFile'));
+
+        Alert::info(sprintf(
+            'Importación finalizada. Nuevos registros: %d. Registros actualizados: %d.',
+            $import->imported,
+            $import->updated
+        ));
+
+        return redirect()->route('platform.civil_servant.list');
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $filters = $request->only(['search']);
+        
+        $civilServants = CivilServant::with('position')
+                ->when($filters['search'] ?? null, function ($query, $search) {
+                    $query->where('name', 'like', "%$search%")
+                          ->orWhere('nit', 'like', "%$search%")
+                          ->orWhere('unit', 'like', "%$search%");
+                })
+                ->filters()
+                ->defaultSort('id', 'desc')
+                ->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.civil_servant_report', compact('civilServants', 'filters'));
+        
+        return $pdf->download('reporte_funcionarios.pdf');
     }
 }

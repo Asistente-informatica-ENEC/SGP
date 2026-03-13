@@ -64,7 +64,7 @@ class AssetEditLayout extends Rows
                 ->title('Categoría'),
 
             DateTimer::make('asset.date')
-                ->format('Y-m-d')
+                ->format('d-m-Y')
                 ->required()
                 ->title('Fecha de Alta en Inventario')
                 ->placeholder('Seleccione fecha...'),

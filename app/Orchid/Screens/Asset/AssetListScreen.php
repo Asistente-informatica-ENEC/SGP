@@ -14,6 +14,12 @@ use Orchid\Support\Facades\Layout;
 
 use Illuminate\Http\Request;
 
+use App\Imports\AssetImport;
+use App\Exports\AssetTemplateExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Orchid\Support\Facades\Alert;
+use Orchid\Screen\Actions\Button;
+
 class AssetListScreen extends Screen
 {
     public function name(): ?string
@@ -34,6 +40,21 @@ class AssetListScreen extends Screen
     public function commandBar(): iterable
     {
         return [
+            Button::make('Exportar PDF')
+                ->icon('bs.file-pdf')
+                ->method('exportPdf')
+                ->rawClick(),
+
+            Button::make('Descargar Plantilla')
+                ->method('downloadTemplate')
+                ->icon('bs.download')
+                ->rawClick(),
+
+            \Orchid\Screen\Actions\ModalToggle::make('Importar Excel')
+                ->modal('importModal')
+                ->method('import')
+                ->icon('bs.upload'),
+
             Link::make('Crear Nuevo Bien')
                 ->icon('bs.plus-circle')
                 ->route('platform.asset.create'),
@@ -84,7 +105,7 @@ class AssetListScreen extends Screen
                         ->title('Categoría'),
 
                     DateTimer::make('date')
-                        ->format('Y-m-d')
+                        ->format('d-m-Y')
                         ->value(request('date'))
                         ->title('Fecha de Alta')
                         ->placeholder('Seleccione fecha...'),
@@ -102,6 +123,17 @@ class AssetListScreen extends Screen
                         ->type(\Orchid\Support\Color::SECONDARY),
                 ])->alignEnd(),
             ]),
+
+            Layout::modal('importModal', Layout::rows([
+                Input::make('importFile')
+                    ->type('file')
+                    ->required()
+                    ->title('Archivo Excel')
+                    ->help('Seleccione el archivo .xlsx o .csv con el inventario de bienes.'),
+            ]))
+                ->title('Importar Bienes desde Excel')
+                ->applyButton('Empezar Importación'),
+
             \App\Orchid\Layouts\Asset\AssetListLayout::class
         ];
     }
@@ -137,5 +169,50 @@ class AssetListScreen extends Screen
     public function clearFilter()
     {
         return redirect()->route('platform.asset.list');
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new AssetTemplateExport, 'plantilla_bienes.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'importFile' => 'required|file|mimes:xlsx,xls,csv',
+        ]);
+
+        $import = new AssetImport();
+        Excel::import($import, $request->file('importFile'));
+
+        Alert::info(sprintf(
+            'Importación de bienes finalizada. Nuevos registros: %d. Registros actualizados: %d.',
+            $import->imported,
+            $import->updated
+        ));
+
+        return redirect()->route('platform.asset.list');
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $filters = $request->only(['search', 'state', 'category', 'date']);
+
+        $assets = Asset::when($filters['search'] ?? null, function ($query, $search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('sicoin', 'like', "%$search%")
+                          ->orWhere('description', 'like', "%$search%");
+                    });
+                })
+                ->when($filters['state'] ?? null, fn($q, $state) => $q->where('state', $state))
+                ->when($filters['category'] ?? null, fn($q, $category) => $q->where('category', $category))
+                ->when($filters['date'] ?? null, fn($q, $date) => $q->whereDate('date', $date))
+                ->filters()
+                ->defaultSort('id', 'desc')
+                ->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.asset_report', compact('assets', 'filters'));
+        
+        return $pdf->download('reporte_bienes.pdf');
     }
 }

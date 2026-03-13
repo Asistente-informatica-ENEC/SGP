@@ -52,7 +52,7 @@ class CivilServantListLayout extends Table
                 
             TD::make('created_at', 'Creado')
                 ->sort()
-                ->render(fn (CivilServant $civilServant) => $civilServant->created_at->toDateTimeString()),
+                ->render(fn (CivilServant $civilServant) => $civilServant->created_at->format('d-m-Y')),
         ];
     }
 }
