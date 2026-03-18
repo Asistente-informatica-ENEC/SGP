@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Assignment extends Model
 {
     use AsSource, Filterable, HasFactory;
+    protected $casts = [
+        'date' => 'datetime',
+    ];
+
     protected $fillable = [
         'asset_id',
         'responsability_card_id',

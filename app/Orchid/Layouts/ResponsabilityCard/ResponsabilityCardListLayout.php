@@ -6,6 +6,7 @@ use App\Models\ResponsabilityCard;
 use Orchid\Screen\Layouts\Table;
 use Orchid\Screen\TD;
 use Orchid\Screen\Actions\Link;
+use Orchid\Screen\Actions\ModalToggle;
 use Orchid\Screen\Actions\DropDown;
 use Orchid\Screen\Actions\Button;
 
@@ -27,8 +28,12 @@ class ResponsabilityCardListLayout extends Table
             TD::make('assignment_code', 'Tarjeta')
                 ->sort()
                 ->filter(TD::FILTER_TEXT)
-                ->render(fn (ResponsabilityCard $card) => Link::make('No. ' . $card->assignment_code)
-                    ->route('platform.responsability_card.edit', [$card])),
+                ->render(fn (ResponsabilityCard $card) => ModalToggle::make('No. ' . $card->assignment_code)
+                    ->modal('modalResponsabilityCard')
+                    ->method('asyncGetResponsabilityCard')
+                    ->asyncParameters([
+                        'card' => $card->id,
+                    ])),
 
             TD::make('assign_name', 'Funcionario (Histórico)')
                 ->sort()
@@ -55,6 +60,13 @@ class ResponsabilityCardListLayout extends Table
                         Link::make(__('Edit'))
                             ->route('platform.responsability_card.edit', [$card])
                             ->icon('bs.pencil'),
+
+                        Button::make('Emitir Excel')
+                            ->icon('bs.file-earmark-excel')
+                            ->method('exportExcel', [
+                                'card' => $card->id,
+                            ])
+                            ->rawClick(),
 
                         Button::make(__('Delete'))
                             ->icon('bs.trash')
