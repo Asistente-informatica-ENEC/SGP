@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('responsability_cards', function (Blueprint $table) {
             $table->id();
             $table->foreignId('civil_servant_id')->constrained('civil_servants')->onDelete('cascade');
+            $table->string('assign_name')->nullable();
+            $table->string('role')->nullable();
             $table->string('assignment_code')->unique();
             $table->dateTime('assign_date');
             $table->dateTime('update_date')->nullable();

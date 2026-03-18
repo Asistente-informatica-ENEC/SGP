@@ -13,6 +13,8 @@ class AssetTemplateExport implements FromArray, WithHeadings
             [
                 '68234',
                 'COMPUTADORA DE ESCRITORIO CON MONITOR Y TECLADO',
+                'LIBRO-01',
+                'FOLIO-45',
                 '5500',
                 'DISPONIBLE',
                 'EQUIPO DE COMPUTO',
@@ -26,6 +28,8 @@ class AssetTemplateExport implements FromArray, WithHeadings
         return [
             'sicoin',
             'descripcion',
+            'libro',
+            'folio',
             'valor',
             'estado',
             'categoria',

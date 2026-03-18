@@ -39,11 +39,13 @@ class AssetImport implements ToModel, WithHeadingRow
         $asset = Asset::updateOrCreate(
             ['sicoin'      => $row['sicoin']], // Identificador único
             [
-                'description' => $row['descripcion'] ?? $row['descripción'],
-                'value'       => $row['valor'] ?? $row['precio'] ?? 0,
-                'state'       => $state,
-                'category'    => $category,
-                'date'        => $date ?? now(),
+                'description'    => $row['descripcion'] ?? $row['descripción'],
+                'inventory_book' => $row['libro'] ?? null,
+                'folio_number'   => $row['folio'] ?? null,
+                'value'          => $row['valor'] ?? $row['precio'] ?? 0,
+                'state'          => $state,
+                'category'       => $category,
+                'date'           => $date ?? now(),
             ]
         );
 

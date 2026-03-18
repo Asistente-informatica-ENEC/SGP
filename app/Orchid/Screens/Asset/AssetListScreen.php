@@ -4,6 +4,9 @@ namespace App\Orchid\Screens\Asset;
 
 use App\Models\Asset;
 use Orchid\Screen\Actions\Link;
+use Orchid\Screen\Actions\Button;
+use Orchid\Screen\Actions\DropDown;
+use Orchid\Screen\Actions\ModalToggle;
 use Orchid\Screen\Screen;
 
 use Orchid\Screen\Fields\Select;
@@ -18,7 +21,6 @@ use App\Imports\AssetImport;
 use App\Exports\AssetTemplateExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Orchid\Support\Facades\Alert;
-use Orchid\Screen\Actions\Button;
 
 class AssetListScreen extends Screen
 {
@@ -40,24 +42,28 @@ class AssetListScreen extends Screen
     public function commandBar(): iterable
     {
         return [
-            Button::make('Exportar PDF')
-                ->icon('bs.file-pdf')
-                ->method('exportPdf')
-                ->rawClick(),
+            \Orchid\Screen\Actions\DropDown::make('Acciones')
+                ->icon('bs.caret-down')
+                ->list([
+                    \Orchid\Screen\Actions\Link::make('Crear Nuevo Bien')
+                        ->icon('bs.plus-circle')
+                        ->route('platform.asset.create'),
 
-            Button::make('Descargar Plantilla')
-                ->method('downloadTemplate')
-                ->icon('bs.download')
-                ->rawClick(),
+                    \Orchid\Screen\Actions\Button::make('Exportar PDF')
+                        ->icon('bs.file-pdf')
+                        ->method('exportPdf')
+                        ->rawClick(),
 
-            \Orchid\Screen\Actions\ModalToggle::make('Importar Excel')
-                ->modal('importModal')
-                ->method('import')
-                ->icon('bs.upload'),
+                    \Orchid\Screen\Actions\Button::make('Descargar Plantilla')
+                        ->method('downloadTemplate')
+                        ->icon('bs.download')
+                        ->rawClick(),
 
-            Link::make('Crear Nuevo Bien')
-                ->icon('bs.plus-circle')
-                ->route('platform.asset.create'),
+                    \Orchid\Screen\Actions\ModalToggle::make('Importar Excel')
+                        ->icon('bs.upload')
+                        ->modal('importExcelModal')
+                        ->method('import'),
+                ]),
         ];
     }
 
@@ -124,7 +130,7 @@ class AssetListScreen extends Screen
                 ])->alignEnd(),
             ]),
 
-            Layout::modal('importModal', Layout::rows([
+            Layout::modal('importExcelModal', Layout::rows([
                 Input::make('importFile')
                     ->type('file')
                     ->required()

@@ -15,8 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('sicoin')->unique();
             $table->text('description');
+            $table->string('inventory_book')->nullable();
+            $table->string('folio_number')->nullable();
             $table->decimal('value', 15, 2);
-            $table->string('state')->default('disponible');
+            $table->string('state')->default('DISPONIBLE');
             $table->string('category');
             $table->dateTime('date');
             $table->timestamps();

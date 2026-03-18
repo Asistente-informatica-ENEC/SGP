@@ -31,6 +31,16 @@ class AssetEditLayout extends Rows
                 ->title('Descripción del Bien')
                 ->placeholder('Detalles físicos, marca, modelo, etc.'),
 
+            Input::make('asset.inventory_book')
+                ->type('text')
+                ->title('Libro de Inventarios')
+                ->placeholder('Número de libro...'),
+
+            Input::make('asset.folio_number')
+                ->type('text')
+                ->title('Número de Folio')
+                ->placeholder('Número de folio...'),
+
             Input::make('asset.value')
                 ->type('number')
                 ->step(0.01)
@@ -65,6 +75,7 @@ class AssetEditLayout extends Rows
 
             DateTimer::make('asset.date')
                 ->format('d-m-Y')
+                ->serverFormat('Y-m-d')
                 ->required()
                 ->title('Fecha de Alta en Inventario')
                 ->placeholder('Seleccione fecha...'),

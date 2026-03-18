@@ -18,6 +18,8 @@ use App\Imports\CivilServantImport;
 use App\Exports\CivilServantTemplateExport;
 use Maatwebsite\Excel\Facades\Excel;
 
+use Orchid\Screen\Actions\DropDown;
+
 class CivilServantListScreen extends Screen
 {
     /**
@@ -43,24 +45,28 @@ class CivilServantListScreen extends Screen
     public function commandBar(): iterable
     {
         return [
-            Button::make('Exportar PDF')
-                ->icon('bs.file-pdf')
-                ->method('exportPdf')
-                ->rawClick(),
+            \Orchid\Screen\Actions\DropDown::make('Acciones')
+                ->icon('bs.caret-down')
+                ->list([
+                    \Orchid\Screen\Actions\Link::make('Crear Nuevo')
+                        ->icon('bs.plus-circle')
+                        ->route('platform.civil_servant.create'),
 
-            Button::make('Descargar Plantilla')
-                ->method('downloadTemplate')
-                ->icon('bs.download')
-                ->rawClick(),
+                    \Orchid\Screen\Actions\Button::make('Exportar PDF')
+                        ->icon('bs.file-pdf')
+                        ->method('exportPdf')
+                        ->rawClick(),
 
-            \Orchid\Screen\Actions\ModalToggle::make('Importar Excel')
-                ->modal('importModal')
-                ->method('import')
-                ->icon('bs.upload'),
+                    \Orchid\Screen\Actions\Button::make('Descargar Plantilla')
+                        ->method('downloadTemplate')
+                        ->icon('bs.download')
+                        ->rawClick(),
 
-            Link::make('Crear Nuevo')
-                ->icon('bs.plus-circle')
-                ->route('platform.civil_servant.create'),
+                    \Orchid\Screen\Actions\ModalToggle::make('Importar Excel')
+                        ->icon('bs.upload')
+                        ->modal('importExcelModal')
+                        ->method('import'),
+                ]),
         ];
     }
 
@@ -80,7 +86,7 @@ class CivilServantListScreen extends Screen
                         ->title('Buscador de Funcionarios')
                         ->placeholder('Buscar por nombre, NIT o unidad...')
                         ->help('Ingrese un término y pulse Filtrar.'),
-                    
+
                     \Orchid\Screen\Actions\Button::make('Filtrar')
                         ->icon('bs.search')
                         ->method('handleFilter')
@@ -93,7 +99,7 @@ class CivilServantListScreen extends Screen
                 ])->alignEnd(),
             ]),
 
-            Layout::modal('importModal', Layout::rows([
+            Layout::modal('importExcelModal', Layout::rows([
                 Input::make('importFile')
                     ->type('file')
                     ->required()

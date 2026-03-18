@@ -41,12 +41,14 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 10%;">SICOIN</th>
-                    <th style="width: 40%;">Descripción</th>
-                    <th style="width: 10%;">Valor</th>
-                    <th style="width: 12%;">Estado</th>
-                    <th style="width: 18%;">Categoría</th>
-                    <th style="width: 10%;">Fecha Alta</th>
+                    <th style="width: 8%;">SICOIN</th>
+                    <th style="width: 32%;">Descripción</th>
+                    <th style="width: 10%;">Libro</th>
+                    <th style="width: 10%;">Folio</th>
+                    <th style="width: 9%;">Valor</th>
+                    <th style="width: 10%;">Estado</th>
+                    <th style="width: 13%;">Categoría</th>
+                    <th style="width: 8%;">Alta</th>
                 </tr>
             </thead>
             <tbody>
@@ -54,6 +56,8 @@
                     <tr>
                         <td>{{ $asset->sicoin }}</td>
                         <td class="text-justify">{{ $asset->description }}</td>
+                        <td>{{ $asset->inventory_book }}</td>
+                        <td>{{ $asset->folio_number }}</td>
                         <td>Q {{ number_format($asset->value, 2) }}</td>
                         <td>{{ $asset->state }}</td>
                         <td>{{ $asset->category }}</td>

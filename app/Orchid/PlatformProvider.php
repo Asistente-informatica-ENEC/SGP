@@ -48,6 +48,10 @@ class PlatformProvider extends OrchidServiceProvider
             ->icon('bs.briefcase')
             ->route('platform.position.list'),
 
+            Menu::make('Tarjetas de Responsabilidad')
+            ->icon('bs.card-checklist')
+            ->route('platform.responsability_card.list'),
+
 
 
             Menu::make(__('Users'))

@@ -38,6 +38,14 @@ class AssetListLayout extends Table
                 ->style('text-align: justify')
                 ->filter(TD::FILTER_TEXT),
 
+            TD::make('inventory_book', 'Libro')
+                ->sort()
+                ->filter(TD::FILTER_TEXT),
+
+            TD::make('folio_number', 'Folio')
+                ->sort()
+                ->filter(TD::FILTER_TEXT),
+
             TD::make('value', 'Valor')
                 ->sort()
                 ->width('150px')

@@ -8,6 +8,8 @@ use App\Orchid\Screens\Position\PositionEditScreen;
 use App\Orchid\Screens\Position\PositionListScreen;
 use App\Orchid\Screens\CivilServant\CivilServantEditScreen;
 use App\Orchid\Screens\CivilServant\CivilServantListScreen;
+use App\Orchid\Screens\ResponsabilityCard\ResponsabilityCardListScreen;
+use App\Orchid\Screens\ResponsabilityCard\ResponsabilityCardEditScreen;
 use App\Orchid\Screens\Examples\ExampleActionsScreen;
 use App\Orchid\Screens\Examples\ExampleCardsScreen;
 use App\Orchid\Screens\Examples\ExampleChartsScreen;
@@ -170,4 +172,23 @@ Route::screen('positions/create', PositionEditScreen::class)
         ->parent('platform.position.list')
         ->push('Crear', route('platform.position.create')));
 
-// Route::screen('idea', Idea::class, 'platform.screens.idea');
+// Platform > Tarjetas de Responsabilidad
+Route::screen('responsability_cards', ResponsabilityCardListScreen::class)
+    ->name('platform.responsability_card.list')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Tarjetas de Responsabilidad', route('platform.responsability_card.list')));
+
+// Platform > Tarjetas de Responsabilidad > Editar
+Route::screen('responsability_cards/{responsabilityCard}/edit', ResponsabilityCardEditScreen::class)
+    ->name('platform.responsability_card.edit')
+    ->breadcrumbs(fn (Trail $trail, $responsabilityCard) => $trail
+        ->parent('platform.responsability_card.list')
+        ->push('Editar', route('platform.responsability_card.edit', $responsabilityCard)));
+
+// Platform > Tarjetas de Responsabilidad > Crear
+Route::screen('responsability_cards/create', ResponsabilityCardEditScreen::class)
+    ->name('platform.responsability_card.create')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.responsability_card.list')
+        ->push('Crear', route('platform.responsability_card.create')));
