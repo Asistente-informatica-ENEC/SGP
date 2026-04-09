@@ -68,6 +68,13 @@ class ResponsabilityCardListLayout extends Table
                             ])
                             ->rawClick(),
 
+                        Button::make('Exportar PDF')
+                            ->icon('bs.file-earmark-pdf')
+                            ->method('exportPdf', [
+                                'card' => $card->id,
+                            ])
+                            ->rawClick(),
+
                         Button::make(__('Delete'))
                             ->icon('bs.trash')
                             ->confirm(__('Once the responsibility card is deleted, all of its resources and data will be permanently deleted.'))

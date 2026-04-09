@@ -39,6 +39,9 @@ class ResponsabilityCardExport
         // Eliminar filas para que ajuste mejor (Petición de usuario)
         $sheet->removeRow(19, 1);
         $sheet->removeRow(22, 1);
+
+        // Agregar fila extra para empujar las firmas al fondo de la hoja (petición puntual de ayer)
+        $sheet->insertNewRowBefore(16, 1);
         
         // Ajustar tamaño de fuente en fila 20 (+0.5 según pedido)
         $row20Style = $sheet->getStyle('A20:H20');
@@ -81,23 +84,29 @@ class ResponsabilityCardExport
                 // F (HABER) queda vacío
                 $sheet->setCellValue('G' . $currentRow, $asset->value); // SALDO
                 $sheet->setCellValue('H' . $currentRow, $asset->state); // OBSERVACIÓN
+
+                // --- AJUSTE DINÁMICO PARA DESCRIPCIONES LARGAS ---
+                $sheet->getStyle('D' . $currentRow)->getAlignment()->setWrapText(true);
+                $sheet->getStyle('D' . $currentRow)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP);
+                $sheet->getRowDimension($currentRow)->setRowHeight(-1);
+                
                 $currentRow++;
             }
         }
 
         // --- AJUSTES FINALES DE IMPRESIÓN ---
-        // Aseguramos que el área de impresión empiece desde la columna A y termine exacto en la H
-        $sheet->getPageSetup()->setPrintArea('A1:H' . ($currentRow + 10)); // Regresamos a la columna H
+        // Aseguramos que el área de impresión sea lo suficientemente grande para incluir las firmas (hasta fila 28 aprox.)
+        $sheet->getPageSetup()->setPrintArea('A1:H28');
         
         // Quitamos el centrado horizontal para forzar el inicio a la izquierda controlado
         $sheet->getPageSetup()->setHorizontalCentered(false);
 
-        // Márgenes ajustados: Izquierda exacto 1.1cm (0.433 pulg), Derecha mínimo.
+        // Márgenes ajustados: Izquierda exacto 1.1cm (0.433 pulg), Derecha mínimo, Inferior mínimo 0.1.
         $sheet->getPageMargins()
             ->setLeft(0.433)
             ->setRight(0.15)
             ->setTop(0.3)
-            ->setBottom(0.3);
+            ->setBottom(0.1);
 
         // --- FIN MApEO ---
 

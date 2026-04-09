@@ -28,20 +28,14 @@ class ResponsabilityCardEditLayout extends Rows
 
             Input::make('responsabilityCard.assignment_code')
                 ->title('Tarjeta')
-                ->placeholder('Ej: RC-2026-001')
+                ->placeholder('Ej: No. 100')
                 ->required(),
 
             DateTimer::make('responsabilityCard.assign_date')
                 ->title('Fecha de Emisión')
+                ->placeholder('Seleccionar fecha')
                 ->format('Y-m-d')
                 ->required(),
-
-            Relation::make('assets.')
-                ->fromModel(Asset::class, 'description', 'id')
-                ->applyScope('disponible')
-                ->multiple()
-                ->title('Bienes a Asignar')
-                ->help('Seleccione los bienes que desea vincular a esta tarjeta. Solo se muestran bienes disponibles.'),
         ];
     }
 }

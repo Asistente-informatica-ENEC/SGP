@@ -7,7 +7,9 @@ use App\Models\CivilServant;
 use App\Models\Assignment;
 use App\Models\Asset;
 use App\Orchid\Layouts\ResponsabilityCard\ResponsabilityCardEditLayout;
+use App\Orchid\Layouts\ResponsabilityCard\AssetSelectionListener;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Orchid\Screen\Actions\Button;
 use Orchid\Screen\Screen;
 use Orchid\Support\Facades\Alert;
@@ -29,9 +31,12 @@ class ResponsabilityCardEditScreen extends Screen
     {
         $responsabilityCard->load('assignments.asset');
         
+        $assetIds = $responsabilityCard->assignments->pluck('asset_id')->toArray();
+        
         return [
             'responsabilityCard' => $responsabilityCard,
-            'assets' => $responsabilityCard->assignments->pluck('asset_id')->toArray(),
+            'assets' => $assetIds,
+            'selectedAssets' => \App\Models\Asset::whereIn('id', $assetIds)->get(),
         ];
     }
 
@@ -73,7 +78,8 @@ class ResponsabilityCardEditScreen extends Screen
     public function layout(): iterable
     {
         return [
-            ResponsabilityCardEditLayout::class
+            ResponsabilityCardEditLayout::class,
+            AssetSelectionListener::class,
         ];
     }
 
@@ -100,30 +106,73 @@ class ResponsabilityCardEditScreen extends Screen
             // 1. Obtener datos del funcionario para el snapshot
             $servant = CivilServant::with('position')->findOrFail($data['civil_servant_id']);
             
-            $responsabilityCard->fill($data);
-            $responsabilityCard->assign_name = $servant->name;
-            $responsabilityCard->role = $servant->position?->name ?? 'Sin Puesto';
-            $responsabilityCard->save();
+            // Si es edición, primero liberamos previos para evitar duplicidad y mantener estado limpio
+            if ($responsabilityCard->exists) {
+                $oldAssetIds = $responsabilityCard->assignments()->pluck('asset_id');
+                Asset::whereIn('id', $oldAssetIds)->update(['state' => 'DISPONIBLE']);
+                $responsabilityCard->assignments()->delete();
+            }
 
-            // 2. Gestionar Asignaciones
-            // Si es edición, podrías querer manejar la desvinculación. 
-            // Para simplicidad en esta fase, creamos nuevas asignaciones para los assets seleccionados.
-            
-            foreach ($assetIds as $assetId) {
-                // Verificar si ya está asignado a esta tarjeta
-                $exists = Assignment::where('responsability_card_id', $responsabilityCard->id)
-                    ->where('asset_id', $assetId)
-                    ->exists();
+            // 2. Algoritmo de Empaquetado Inteligente
+            $assets = Asset::whereIn('id', $assetIds)->get()->keyBy('id');
+            $chunks = [];
+            $currentChunk = [];
+            $currentLines = 0;
+            $maxLines = 18; // ~18 líneas de texto por hoja (bastante holgado)
 
-                if (!$exists) {
+            foreach ($assetIds as $id) {
+                if (!isset($assets[$id])) continue;
+                $asset = $assets[$id];
+                
+                // Calcula cuantas líneas de 80 caracteres toma, sumando 1 línea de 'padding'
+                $lines = ceil(mb_strlen($asset->description ?? '') / 80) + 1;
+                
+                if ($currentLines + $lines > $maxLines && count($currentChunk) > 0) {
+                    $chunks[] = $currentChunk;
+                    $currentChunk = [];
+                    $currentLines = 0;
+                }
+                
+                $currentChunk[] = $id;
+                $currentLines += $lines;
+            }
+            if (!empty($currentChunk)) {
+                $chunks[] = $currentChunk;
+            }
+
+            // 3. Crear tarjetas por cada página
+            $currentCode = ltrim(rtrim($data['assignment_code']));
+            $isFirst = true;
+
+            foreach ($chunks as $chunkAssetIds) {
+                if ($isFirst) {
+                    $card = $responsabilityCard;
+                    $isFirst = false;
+                } else {
+                    $card = new ResponsabilityCard();
+                    $currentCode++; // Incrementa alfabético/numérico (Ej. 270 -> 271)
+                    
+                    if (ResponsabilityCard::where('assignment_code', $currentCode)->exists()) {
+                        throw ValidationException::withMessages([
+                            'responsabilityCard.assignment_code' => "El empaquetado automático necesita crear la hoja '{$currentCode}', pero ya está siendo utilizada en el sistema. Selecciona menos bienes o asegúrate de que haya correlativos libres."
+                        ]);
+                    }
+                }
+                
+                $card->fill($data);
+                $card->assignment_code = $currentCode;
+                $card->assign_name = $servant->name;
+                $card->role = $servant->position?->name ?? 'Sin Puesto';
+                $card->save();
+
+                // Crear Asignaciones y bloquear activo
+                foreach ($chunkAssetIds as $aId) {
                     Assignment::create([
-                        'responsability_card_id' => $responsabilityCard->id,
-                        'asset_id' => $assetId,
-                        'date' => $responsabilityCard->assign_date,
+                        'responsability_card_id' => $card->id,
+                        'asset_id' => $aId,
+                        'date' => $card->assign_date,
                     ]);
-
-                    // Actualizar estado del Bien
-                    Asset::where('id', $assetId)->update(['state' => 'ASIGNADO']);
+                    Asset::where('id', $aId)->update(['state' => 'ASIGNADO']);
                 }
             }
         });

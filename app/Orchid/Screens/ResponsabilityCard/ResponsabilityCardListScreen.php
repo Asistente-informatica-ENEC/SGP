@@ -11,7 +11,7 @@ use Orchid\Screen\Screen;
 use Illuminate\Http\Request;
 use Orchid\Support\Facades\Alert;
 use App\Exports\ResponsabilityCardExport;
-
+use Barryvdh\DomPDF\Facade\Pdf;
 class ResponsabilityCardListScreen extends Screen
 {
     /**
@@ -73,6 +73,15 @@ class ResponsabilityCardListScreen extends Screen
                         ])
                         ->rawClick()
                         ->canSee(request()->has('card')),
+
+                    \Orchid\Screen\Actions\Button::make('Exportar PDF')
+                        ->icon('bs.file-earmark-pdf')
+                        ->method('exportPdf')
+                        ->parameters([
+                            'card' => request('card'),
+                        ])
+                        ->rawClick()
+                        ->canSee(request()->has('card')),
                 ]),
                 ResponsabilityCardDetailsLayout::class,
             ])
@@ -103,6 +112,32 @@ class ResponsabilityCardListScreen extends Screen
     public function exportExcel(ResponsabilityCard $card)
     {
         return (new ResponsabilityCardExport($card))->download();
+    }
+
+    /**
+     * @param ResponsabilityCard $card
+     */
+    public function exportPdf(ResponsabilityCard $card)
+    {
+        $card->load(['civilServant.position', 'assignments.asset']);
+
+        $vienenCard = ResponsabilityCard::where('civil_servant_id', $card->civil_servant_id)
+            ->where('id', '<', $card->id)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $vanCard = ResponsabilityCard::where('civil_servant_id', $card->civil_servant_id)
+            ->where('id', '>', $card->id)
+            ->orderBy('id', 'asc')
+            ->first();
+
+        $pdf = Pdf::loadView('pdf.responsability_card', [
+            'card' => $card,
+            'vienen' => $vienenCard ? 'TARJETA No. ' . $vienenCard->assignment_code : '...............',
+            'van'    => $vanCard ? 'TARJETA No. ' . $vanCard->assignment_code : '...............',
+        ])->setPaper(array(0, 0, 612, 936), 'landscape');
+
+        return $pdf->stream('Tarjeta_Responsabilidad_' . $card->assignment_code . '.pdf');
     }
 
     /**
