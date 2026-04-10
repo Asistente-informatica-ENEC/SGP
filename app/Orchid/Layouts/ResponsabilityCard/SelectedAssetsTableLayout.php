@@ -30,6 +30,14 @@ class SelectedAssetsTableLayout extends Table
                 ->width('150px'),
 
             TD::make('description', 'Descripción'),
+
+            TD::make('observation', 'Observación')
+                ->render(function (Asset $asset) {
+                    return \Orchid\Screen\Fields\Input::make("observations[{$asset->id}]")
+                        ->type('text')
+                        ->maxlength(100)
+                        ->placeholder('Ej. Buen estado...');
+                }),
         ];
     }
 

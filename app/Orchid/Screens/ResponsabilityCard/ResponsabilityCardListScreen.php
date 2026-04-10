@@ -131,10 +131,27 @@ class ResponsabilityCardListScreen extends Screen
             ->orderBy('id', 'asc')
             ->first();
 
+        // Calcular el Sumatorio Histórico de Vienen
+        $vienenAmount = \App\Models\Assignment::whereHas('responsabilityCard', function($q) use ($card) {
+            $q->where('civil_servant_id', $card->civil_servant_id)
+              ->where('id', '<', $card->id);
+        })->with('asset')->get()->sum(function($assignment) {
+            return (float) optional($assignment->asset)->value;
+        });
+
+        // Sumar lo de esta tarjeta
+        $cardAmount = $card->assignments->sum(function($assignment) {
+            return (float) optional($assignment->asset)->value;
+        });
+
+        $vanAmount = $vienenAmount + $cardAmount;
+
         $pdf = Pdf::loadView('pdf.responsability_card', [
             'card' => $card,
             'vienen' => $vienenCard ? 'TARJETA No. ' . $vienenCard->assignment_code : '...............',
             'van'    => $vanCard ? 'TARJETA No. ' . $vanCard->assignment_code : '...............',
+            'vienenAmount' => $vienenAmount,
+            'vanAmount' => $vanAmount,
         ])->setPaper(array(0, 0, 612, 936), 'landscape');
 
         return $pdf->stream('Tarjeta_Responsabilidad_' . $card->assignment_code . '.pdf');

@@ -18,6 +18,7 @@ class Assignment extends Model
         'asset_id',
         'responsability_card_id',
         'date',
+        'observation',
     ];
 
     public function asset()

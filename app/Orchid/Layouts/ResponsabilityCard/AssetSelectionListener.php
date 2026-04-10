@@ -29,9 +29,11 @@ class AssetSelectionListener extends Listener
     public function handle(Repository $repository, Request $request): Repository
     {
         $assets = $request->input('assets', []);
+        $observations = $request->input('observations', []);
 
         return $repository
             ->set('assets', $assets)
+            ->set('observations', $observations)
             ->set('selectedAssets', Asset::whereIn('id', $assets ?? [])->get());
     }
 

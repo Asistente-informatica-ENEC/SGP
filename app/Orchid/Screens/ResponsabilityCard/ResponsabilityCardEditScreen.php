@@ -36,6 +36,7 @@ class ResponsabilityCardEditScreen extends Screen
         return [
             'responsabilityCard' => $responsabilityCard,
             'assets' => $assetIds,
+            'observations' => $responsabilityCard->assignments->pluck('observation', 'asset_id')->toArray(),
             'selectedAssets' => \App\Models\Asset::whereIn('id', $assetIds)->get(),
         ];
     }
@@ -101,8 +102,9 @@ class ResponsabilityCardEditScreen extends Screen
 
         $data = $request->get('responsabilityCard');
         $assetIds = $request->get('assets', []);
+        $observations = $request->get('observations', []);
 
-        DB::transaction(function () use ($responsabilityCard, $data, $assetIds) {
+        DB::transaction(function () use ($responsabilityCard, $data, $assetIds, $observations) {
             // 1. Obtener datos del funcionario para el snapshot
             $servant = CivilServant::with('position')->findOrFail($data['civil_servant_id']);
             
@@ -171,6 +173,7 @@ class ResponsabilityCardEditScreen extends Screen
                         'responsability_card_id' => $card->id,
                         'asset_id' => $aId,
                         'date' => $card->assign_date,
+                        'observation' => $observations[$aId] ?? null,
                     ]);
                     Asset::where('id', $aId)->update(['state' => 'ASIGNADO']);
                 }

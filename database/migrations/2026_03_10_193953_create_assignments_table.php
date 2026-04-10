@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('asset_id')->constrained('assets')->onDelete('cascade');
             $table->foreignId('responsability_card_id')->constrained('responsability_cards')->onDelete('cascade');
+            $table->string('observation', 255)->nullable();
             $table->dateTime('date');
             $table->timestamps();
         });

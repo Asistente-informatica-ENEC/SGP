@@ -154,8 +154,11 @@
         <tbody>
             <!-- Fila VIENEN -->
             <tr>
-                <td colspan="4" class="text-right" style="font-weight: bold; border-right: none;">V I E N E N ................................</td>
-                <td colspan="3" class="text-center" style="font-weight: bold; border-left: none;">{{ $vienen }}</td>
+                <td colspan="3" class="text-right" style="font-weight: bold; border-right: none;">V I E N E N ................................</td>
+                <td class="text-left" style="font-weight: bold; border-left: none;">{{ $vienen }}</td>
+                <td class="text-right" style="font-weight: bold;">Q. {{ number_format($vienenAmount, 2, '.', ',') }}</td>
+                <td></td>
+                <td class="text-right" style="font-weight: bold;">Q. {{ number_format($vienenAmount, 2, '.', ',') }}</td>
                 <td></td>
             </tr>
 
@@ -170,15 +173,18 @@
                 <td>{{ number_format((float)$asset->value, 2, '.', '') }}</td>
                 <td></td>
                 <td>{{ number_format((float)$asset->value, 2, '.', '') }}</td>
-                <td>{{ $asset->state }}</td>
+                <td>{{ $assignment->observation }}</td>
             </tr>
             @endif
             @endforeach
 
             <!-- Fila VAN -->
             <tr>
-                <td colspan="4" class="text-right" style="font-weight: bold; border-right: none;">V A N ................................</td>
-                <td colspan="3" class="text-center" style="font-weight: bold; border-left: none;">{{ $van }}</td>
+                <td colspan="3" class="text-right" style="font-weight: bold; border-right: none;">V A N ................................</td>
+                <td class="text-left" style="font-weight: bold; border-left: none;">{{ $van }}</td>
+                <td class="text-right" style="font-weight: bold;">Q. {{ number_format($vanAmount, 2, '.', ',') }}</td>
+                <td></td>
+                <td class="text-right" style="font-weight: bold;">Q. {{ number_format($vanAmount, 2, '.', ',') }}</td>
                 <td></td>
             </tr>
         </tbody>
