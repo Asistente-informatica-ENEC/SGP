@@ -57,7 +57,8 @@ class AssetEditLayout extends Rows
                     'SUSTRAÍDO'     => 'SUSTRAÍDO',
                 ])
                 ->required()
-                ->title('Estado Actual'),
+                ->title('Estado Actual')
+                ->canSee($this->query->get('asset')->exists),
 
             Select::make('asset.category')
                 ->options([

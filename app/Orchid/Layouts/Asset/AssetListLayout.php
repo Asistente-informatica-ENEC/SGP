@@ -6,6 +6,7 @@ use App\Models\Asset;
 use Orchid\Screen\Layouts\Table;
 use Orchid\Screen\TD;
 use Orchid\Screen\Actions\Link;
+use Orchid\Screen\Actions\ModalToggle;
 
 class AssetListLayout extends Table
 {
@@ -30,12 +31,18 @@ class AssetListLayout extends Table
             TD::make('sicoin', 'SICOIN')
                 ->sort()
                 ->filter(TD::FILTER_TEXT)
-                ->render(fn (Asset $asset) => Link::make($asset->sicoin)
-                    ->route('platform.asset.edit', ['asset' => $asset])),
+                ->render(fn (Asset $asset) => ModalToggle::make($asset->sicoin)
+                    ->modal('viewAssetModal')
+                    ->modalTitle('Detalles del Bien - ' . $asset->sicoin)
+                    ->method('redirectToEdit')
+                    ->asyncParameters([
+                        'asset' => $asset->id,
+                    ])),
 
             TD::make('description', 'Descripción')
                 ->sort()
-                ->style('text-align: justify')
+                ->style('text-align: justify; max-width: 400px; white-space: normal;')
+                ->render(fn (Asset $asset) => '<span title="' . e($asset->description) . '">' . \Illuminate\Support\Str::limit($asset->description, 50) . '</span>')
                 ->filter(TD::FILTER_TEXT),
 
             TD::make('inventory_book', 'Libro')
@@ -65,5 +72,15 @@ class AssetListLayout extends Table
                 ->width('150px')
                 ->render(fn (Asset $asset) => $asset->date ? \Carbon\Carbon::parse($asset->date)->format('d-m-Y') : ''),
         ];
+    }
+
+    protected function textNotFound(): string
+    {
+        return 'No hay bienes registrados actualmente';
+    }
+
+    protected function subNotFound(): string
+    {
+        return 'Importa o crea nuevos bienes para visualizarlos en este listado';
     }
 }

@@ -13,7 +13,9 @@ use Orchid\Screen\Fields\Select;
 use Orchid\Screen\Fields\DateTimer;
 use Orchid\Screen\Fields\Group;
 use Orchid\Screen\Fields\Input;
+use Orchid\Screen\Sight;
 use Orchid\Support\Facades\Layout;
+use Orchid\Screen\Layouts\Modal;
 
 use Illuminate\Http\Request;
 
@@ -140,8 +142,47 @@ class AssetListScreen extends Screen
                 ->title('Importar Bienes desde Excel')
                 ->applyButton('Empezar Importación'),
 
+            Layout::modal('viewAssetModal', [
+                Layout::rows([
+                    Input::make('view_asset.id')->type('hidden'),
+                ]),
+                Layout::legend('view_asset', [
+                    Sight::make('sicoin', 'SICOIN'),
+                    Sight::make('description', 'Descripción')->render(fn($asset) => "<div style='white-space: pre-wrap;'>{$asset->description}</div>"),
+                    Sight::make('inventory_book', 'Libro de Inventario'),
+                    Sight::make('folio_number', 'Número de Folio'),
+                    Sight::make('value', 'Valor')->render(fn($asset) => 'Q ' . number_format($asset->value, 2)),
+                    Sight::make('state', 'Estado')->render(function($asset) {
+                        $text = $asset->state;
+                        if ($asset->state === 'ASIGNADO' && $asset->latestAssignment?->responsabilityCard?->civilServant) {
+                            $text .= ' - ' . $asset->latestAssignment->responsabilityCard->civilServant->name;
+                        }
+                        return $text;
+                    }),
+                    Sight::make('category', 'Categoría'),
+                    Sight::make('date', 'Fecha de Alta')->render(fn($asset) => $asset->date ? \Carbon\Carbon::parse($asset->date)->format('d-m-Y') : ''),
+                    Sight::make('observations', 'Observaciones')->render(fn($asset) => "<div style='white-space: pre-wrap;'>{$asset->observations}</div>"),
+                ])
+            ])->async('asyncViewAsset')
+              ->applyButton('Editar Bien')
+              ->closeButton('Cerrar')
+              ->size(Modal::SIZE_XL),
+
             \App\Orchid\Layouts\Asset\AssetListLayout::class
         ];
+    }
+
+    public function asyncViewAsset(Asset $asset): array
+    {
+        $asset->load('latestAssignment.responsabilityCard.civilServant');
+        return [
+            'view_asset' => $asset,
+        ];
+    }
+
+    public function redirectToEdit(Request $request)
+    {
+        return redirect()->route('platform.asset.edit', $request->input('view_asset.id'));
     }
 
     public function query(): iterable

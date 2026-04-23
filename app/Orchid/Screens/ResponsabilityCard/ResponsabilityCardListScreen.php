@@ -12,6 +12,9 @@ use Illuminate\Http\Request;
 use Orchid\Support\Facades\Alert;
 use App\Exports\ResponsabilityCardExport;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Orchid\Screen\Fields\Input;
+use Orchid\Screen\Fields\Group;
+use Orchid\Support\Color;
 class ResponsabilityCardListScreen extends Screen
 {
     /**
@@ -21,8 +24,15 @@ class ResponsabilityCardListScreen extends Screen
      */
     public function query(): iterable
     {
+        $search = request('search');
+
         return [
             'responsabilityCards' => ResponsabilityCard::with('civilServant')
+                ->when($search, function ($query, $search) {
+                    $query->where('assignment_code', 'like', "%$search%")
+                          ->orWhere('assign_name', 'like', "%$search%")
+                          ->orWhere('role', 'like', "%$search%");
+                })
                 ->filters()
                 ->defaultSort('id', 'desc')
                 ->paginate()
@@ -61,6 +71,27 @@ class ResponsabilityCardListScreen extends Screen
     public function layout(): iterable
     {
         return [
+            Layout::rows([
+                Group::make([
+                    Input::make('search')
+                        ->type('text')
+                        ->value(request('search'))
+                        ->title('Buscador de Tarjetas')
+                        ->placeholder('Buscar por funcionario, número de tarjeta o puesto...')
+                        ->help('Ingrese un término y pulse Filtrar.'),
+
+                    \Orchid\Screen\Actions\Button::make('Filtrar')
+                        ->icon('bs.search')
+                        ->method('handleFilter')
+                        ->type(Color::PRIMARY),
+
+                    \Orchid\Screen\Actions\Button::make('Limpiar')
+                        ->icon('bs.x-circle')
+                        ->method('clearFilter')
+                        ->type(Color::SECONDARY),
+                ])->alignEnd(),
+            ]),
+
             ResponsabilityCardListLayout::class,
 
             Layout::modal('modalResponsabilityCard', [
@@ -90,6 +121,16 @@ class ResponsabilityCardListScreen extends Screen
                 ->withoutApplyButton()
                 ->size('modal-xl'),
         ];
+    }
+
+    public function handleFilter(Request $request)
+    {
+        return redirect()->route('platform.responsability_card.list', array_filter($request->only(['search'])));
+    }
+
+    public function clearFilter()
+    {
+        return redirect()->route('platform.responsability_card.list');
     }
 
     /**
@@ -135,8 +176,9 @@ class ResponsabilityCardListScreen extends Screen
         $vienenAmount = \App\Models\Assignment::whereHas('responsabilityCard', function($q) use ($card) {
             $q->where('civil_servant_id', $card->civil_servant_id)
               ->where('id', '<', $card->id);
-        })->with('asset')->get()->sum(function($assignment) {
-            return (float) optional($assignment->asset)->value;
+        })->with(['asset', 'responsabilityCard'])->get()->sum(function($assignment) {
+            $value = (float) optional($assignment->asset)->value;
+            return $assignment->responsabilityCard->type === 'descargo' ? -$value : $value;
         });
 
         // Sumar lo de esta tarjeta
@@ -144,7 +186,7 @@ class ResponsabilityCardListScreen extends Screen
             return (float) optional($assignment->asset)->value;
         });
 
-        $vanAmount = $vienenAmount + $cardAmount;
+        $vanAmount = $card->type === 'descargo' ? $vienenAmount - $cardAmount : $vienenAmount + $cardAmount;
 
         $pdf = Pdf::loadView('pdf.responsability_card', [
             'card' => $card,

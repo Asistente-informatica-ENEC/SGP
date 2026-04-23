@@ -38,4 +38,14 @@ class PositionListLayout extends Table
                 ->render(fn (Position $position) => $position->created_at->toDateTimeString()),
         ];
     }
+
+    protected function textNotFound(): string
+    {
+        return 'No hay cargos registrados actualmente';
+    }
+
+    protected function subNotFound(): string
+    {
+        return 'Crea nuevos cargos para visualizarlos en este listado';
+    }
 }

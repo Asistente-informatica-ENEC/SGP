@@ -29,7 +29,9 @@ class SelectedAssetsTableLayout extends Table
             TD::make('sicoin', 'SICOIN')
                 ->width('150px'),
 
-            TD::make('description', 'Descripción'),
+            TD::make('description', 'Descripción')
+                ->style('text-align: justify; max-width: 300px; white-space: normal;')
+                ->render(fn (Asset $asset) => '<span title="' . e($asset->description) . '">' . \Illuminate\Support\Str::limit($asset->description, 50) . '</span>'),
 
             TD::make('observation', 'Observación')
                 ->render(function (Asset $asset) {

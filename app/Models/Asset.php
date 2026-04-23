@@ -30,6 +30,11 @@ class Asset extends Model
         return $this->hasMany(Assignment::class);
     }
 
+    public function latestAssignment()
+    {
+        return $this->hasOne(Assignment::class)->latestOfMany();
+    }
+
     public function removal()
     {
         return $this->hasOne(AssetRemoval::class);

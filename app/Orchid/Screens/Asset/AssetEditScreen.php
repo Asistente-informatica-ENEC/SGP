@@ -71,7 +71,22 @@ class AssetEditScreen extends Screen
 
     public function save(Asset $asset, Request $request)
     {
-        $asset->fill($request->get('asset'))->save();
+        $request->validate([
+            'asset.sicoin' => [
+                'required',
+                \Illuminate\Validation\Rule::unique('assets', 'sicoin')->ignore($asset->id),
+            ],
+        ], [
+            'asset.sicoin.unique' => 'Ya existe un bien registrado con este número SICOIN. Por favor, verifique e intente nuevamente.'
+        ]);
+
+        $data = $request->get('asset');
+        
+        if (!$asset->exists) {
+            $data['state'] = 'DISPONIBLE';
+        }
+
+        $asset->fill($data)->save();
 
         Alert::info('Bien guardado correctamente.');
 

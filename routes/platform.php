@@ -8,6 +8,7 @@ use App\Orchid\Screens\Position\PositionEditScreen;
 use App\Orchid\Screens\Position\PositionListScreen;
 use App\Orchid\Screens\CivilServant\CivilServantEditScreen;
 use App\Orchid\Screens\CivilServant\CivilServantListScreen;
+use App\Orchid\Screens\CivilServant\CivilServantKardexScreen;
 use App\Orchid\Screens\ResponsabilityCard\ResponsabilityCardListScreen;
 use App\Orchid\Screens\ResponsabilityCard\ResponsabilityCardEditScreen;
 use App\Orchid\Screens\Examples\ExampleActionsScreen;
@@ -129,6 +130,13 @@ Route::screen('civil_servants/create', CivilServantEditScreen::class)
     ->breadcrumbs(fn (Trail $trail) => $trail
         ->parent('platform.civil_servant.list')
         ->push('Crear', route('platform.civil_servant.create')));
+
+// Platform > Funcionarios > Kardex
+Route::screen('civil_servants/{civilServant}/kardex', CivilServantKardexScreen::class)
+    ->name('platform.civil_servant.kardex')
+    ->breadcrumbs(fn (Trail $trail, $civilServant) => $trail
+        ->parent('platform.civil_servant.list')
+        ->push('Kardex de Activos', route('platform.civil_servant.kardex', $civilServant)));
 
 // Platform > Bienes
 Route::screen('assets', AssetListScreen::class)

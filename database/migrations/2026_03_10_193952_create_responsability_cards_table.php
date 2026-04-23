@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('assign_name')->nullable();
             $table->string('role')->nullable();
             $table->string('assignment_code')->unique();
+            $table->string('type')->default('asignacion');
             $table->dateTime('assign_date');
             $table->dateTime('update_date')->nullable();
             $table->timestamps();

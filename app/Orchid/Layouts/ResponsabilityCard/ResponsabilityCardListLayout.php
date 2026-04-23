@@ -51,13 +51,13 @@ class ResponsabilityCardListLayout extends Table
                 ->sort()
                 ->render(fn (ResponsabilityCard $card) => $card->created_at->toDateTimeString()),
 
-            TD::make(__('Actions'))
+            TD::make('Acciones')
                 ->align(TD::ALIGN_CENTER)
                 ->width('100px')
                 ->render(fn (ResponsabilityCard $card) => DropDown::make()
                     ->icon('bs.three-dots-vertical')
                     ->list([
-                        Link::make(__('Edit'))
+                        Link::make('Editar')
                             ->route('platform.responsability_card.edit', [$card])
                             ->icon('bs.pencil'),
 
@@ -75,13 +75,23 @@ class ResponsabilityCardListLayout extends Table
                             ])
                             ->rawClick(),
 
-                        Button::make(__('Delete'))
+                        Button::make('Eliminar')
                             ->icon('bs.trash')
-                            ->confirm(__('Once the responsibility card is deleted, all of its resources and data will be permanently deleted.'))
+                            ->confirm('Una vez eliminada la tarjeta, todos los registros asociados se borrarán permanentemente.')
                             ->method('remove', [
                                 'id' => $card->id,
                             ]),
                     ])),
         ];
+    }
+
+    protected function textNotFound(): string
+    {
+        return 'No hay tarjetas de responsabilidad registradas actualmente';
+    }
+
+    protected function subNotFound(): string
+    {
+        return 'Genera una nueva tarjeta para visualizarla en este listado';
     }
 }

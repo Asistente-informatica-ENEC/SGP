@@ -21,6 +21,7 @@ class ResponsabilityCard extends Model
         'assign_name',
         'role',
         'assignment_code',
+        'type',
         'assign_date',
         'update_date',
     ];

@@ -163,15 +163,18 @@
             </tr>
 
             @foreach($card->assignments as $assignment)
-            @php $asset = $assignment->asset; @endphp
+            @php 
+                $asset = $assignment->asset;
+                $isDescargo = $card->type === 'descargo';
+            @endphp
             @if($asset)
             <tr>
                 <td>{{ optional($assignment->date)->format('d/m/Y') }}</td>
                 <td>{{ $asset->sicoin }}</td>
                 <td>1</td>
                 <td class="text-left" style="white-space: pre-wrap;">{{ $asset->description }}</td>
-                <td>{{ number_format((float)$asset->value, 2, '.', '') }}</td>
-                <td></td>
+                <td>{{ !$isDescargo ? number_format((float)$asset->value, 2, '.', '') : '' }}</td>
+                <td>{{ $isDescargo ? number_format((float)$asset->value, 2, '.', '') : '' }}</td>
                 <td>{{ number_format((float)$asset->value, 2, '.', '') }}</td>
                 <td>{{ $assignment->observation }}</td>
             </tr>
@@ -198,16 +201,16 @@
 
         <table class="signature-table">
             <tr>
-                <td style="width: 40%; text-align: left;">
+                <td style="width: 40%; text-align: center;">
                     <div style="margin-bottom: 2px;">f. ________________________________________</div>
-                    <div style="margin-left: 15px;">Angela Elizabeth Delgado Cú</div>
-                    <div style="margin-left: 15px;">Encargada de la Unidad de Activos</div>
+                    <div>{{ auth()->user()->name }}</div>
+                    <div>Encargado(a) de la Unidad de Activos</div>
                 </td>
                 <td style="width: 20%;"></td>
-                <td style="width: 40%; text-align: left;">
+                <td style="width: 40%; text-align: center;">
                     <div style="margin-bottom: 2px;">f. ________________________________________</div>
-                    <div style="margin-left: 15px;text-align: left;width: 100%;">nombre</div>
-                    <div style="margin-left: 15px;text-align: left;width: 100%;">cargo</div>
+                    <div>{{ optional($card->civilServant)->name }}</div>
+                    <div>{{ optional(optional($card->civilServant)->position)->name }}</div>
                 </td>
             </tr>
         </table>

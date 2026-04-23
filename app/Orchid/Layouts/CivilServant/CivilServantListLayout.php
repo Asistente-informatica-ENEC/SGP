@@ -53,6 +53,23 @@ class CivilServantListLayout extends Table
             TD::make('created_at', 'Creado')
                 ->sort()
                 ->render(fn (CivilServant $civilServant) => $civilServant->created_at->format('d-m-Y')),
+
+            TD::make(__('Acciones'))
+                ->align(TD::ALIGN_CENTER)
+                ->width('100px')
+                ->render(fn (CivilServant $civilServant) => Link::make('Inventario')
+                    ->icon('bs.box-seam')
+                    ->route('platform.civil_servant.kardex', $civilServant->id)),
         ];
+    }
+
+    protected function textNotFound(): string
+    {
+        return 'No hay funcionarios registrados actualmente';
+    }
+
+    protected function subNotFound(): string
+    {
+        return 'Importa o crea nuevos funcionarios para visualizarlos en este listado';
     }
 }
