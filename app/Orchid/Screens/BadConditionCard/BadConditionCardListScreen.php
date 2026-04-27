@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Orchid\Screens\ResponsabilityCard;
+namespace App\Orchid\Screens\BadConditionCard;
 
 use App\Models\ResponsabilityCard;
-use App\Orchid\Layouts\ResponsabilityCard\ResponsabilityCardDetailsLayout;
+use App\Orchid\Layouts\BadConditionCard\BadConditionCardDetailsLayout;
 use Orchid\Support\Facades\Layout;
-use App\Orchid\Layouts\ResponsabilityCard\ResponsabilityCardListLayout;
+use App\Orchid\Layouts\BadConditionCard\BadConditionCardListLayout;
 use Orchid\Screen\Actions\Link;
 use Orchid\Screen\Screen;
 use Illuminate\Http\Request;
@@ -15,7 +15,11 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Orchid\Screen\Fields\Input;
 use Orchid\Screen\Fields\Group;
 use Orchid\Support\Color;
-class ResponsabilityCardListScreen extends Screen
+use App\Models\Asset;
+use App\Orchid\Layouts\Asset\AssetHistoryLayout;
+use App\Orchid\Layouts\BadConditionCard\BadConditionAssetListLayout;
+
+class BadConditionCardListScreen extends Screen
 {
     /**
      * Fetch data to be displayed on the screen.
@@ -27,13 +31,24 @@ class ResponsabilityCardListScreen extends Screen
         $search = request('search');
 
         return [
-            'responsabilityCards' => ResponsabilityCard::with('civilServant')
-                ->where('type', '!=', 'mal_estado')
+            'badConditionCards' => ResponsabilityCard::with('civilServant')
+                ->where('type', 'mal_estado')
                 ->when($search, function ($query, $search) {
                     $query->where(function($q) use ($search) {
                         $q->where('assignment_code', 'like', "%$search%")
                           ->orWhere('assign_name', 'like', "%$search%")
                           ->orWhere('role', 'like', "%$search%");
+                    });
+                })
+                ->filters()
+                ->defaultSort('id', 'desc')
+                ->paginate(),
+            
+            'badConditionAssets' => Asset::where('state', 'EN MAL ESTADO')
+                ->when($search, function ($query, $search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('sicoin', 'like', "%$search%")
+                          ->orWhere('description', 'like', "%$search%");
                     });
                 })
                 ->filters()
@@ -49,7 +64,7 @@ class ResponsabilityCardListScreen extends Screen
      */
     public function name(): ?string
     {
-        return 'Tarjetas de Responsabilidad';
+        return 'Bienes en Mal Estado';
     }
 
     /**
@@ -60,9 +75,9 @@ class ResponsabilityCardListScreen extends Screen
     public function commandBar(): iterable
     {
         return [
-            Link::make('Crear Nueva')
+            Link::make('Crear Nueva Tarjeta')
                 ->icon('bs.plus-circle')
-                ->route('platform.responsability_card.create'),
+                ->route('platform.bad_condition_card.create'),
         ];
     }
 
@@ -79,8 +94,8 @@ class ResponsabilityCardListScreen extends Screen
                     Input::make('search')
                         ->type('text')
                         ->value(request('search'))
-                        ->title('Buscador de Tarjetas')
-                        ->placeholder('Buscar por funcionario, número de tarjeta o puesto...')
+                        ->title('Buscador General')
+                        ->placeholder('Buscar por tarjeta, funcionario, SICOIN o descripción...')
                         ->help('Ingrese un término y pulse Filtrar.'),
 
                     \Orchid\Screen\Actions\Button::make('Filtrar')
@@ -95,9 +110,12 @@ class ResponsabilityCardListScreen extends Screen
                 ])->alignEnd(),
             ]),
 
-            ResponsabilityCardListLayout::class,
+            Layout::tabs([
+                'Tarjetas de Mal Estado' => BadConditionCardListLayout::class,
+                'Listado Individual de Bienes' => BadConditionAssetListLayout::class,
+            ]),
 
-            Layout::modal('modalResponsabilityCard', [
+            Layout::modal('modalBadConditionCard', [
                 Layout::rows([
                     \Orchid\Screen\Actions\Button::make('Emitir Tarjeta (Excel)')
                         ->icon('bs.file-earmark-excel')
@@ -117,23 +135,40 @@ class ResponsabilityCardListScreen extends Screen
                         ->rawClick()
                         ->canSee(request()->has('card')),
                 ]),
-                ResponsabilityCardDetailsLayout::class,
+                BadConditionCardDetailsLayout::class,
             ])
-                ->title('Detalles de la Tarjeta de Responsabilidad')
-                ->async('asyncGetResponsabilityCard')
+                ->title('Detalles de la Tarjeta de Mal Estado')
+                ->async('asyncGetBadConditionCard')
                 ->withoutApplyButton()
                 ->size('modal-xl'),
+
+            Layout::modal('assetHistoryModal', [
+                AssetHistoryLayout::class
+            ])->async('asyncGetAssetHistory')
+              ->withoutApplyButton()
+              ->size('modal-lg'),
+        ];
+    }
+
+    public function asyncGetAssetHistory(Asset $asset): array
+    {
+        return [
+            'view_asset' => $asset,
+            'assetHistory' => $asset->assignments()
+                ->with('responsabilityCard.civilServant')
+                ->orderBy('date', 'desc')
+                ->get(),
         ];
     }
 
     public function handleFilter(Request $request)
     {
-        return redirect()->route('platform.responsability_card.list', array_filter($request->only(['search'])));
+        return redirect()->route('platform.bad_condition_card.list', array_filter($request->only(['search'])));
     }
 
     public function clearFilter()
     {
-        return redirect()->route('platform.responsability_card.list');
+        return redirect()->route('platform.bad_condition_card.list');
     }
 
     /**
@@ -141,7 +176,7 @@ class ResponsabilityCardListScreen extends Screen
      *
      * @return array
      */
-    public function asyncGetResponsabilityCard(ResponsabilityCard $card): iterable
+    public function asyncGetBadConditionCard(ResponsabilityCard $card): iterable
     {
         return [
             'cardAssignments' => $card->assignments()->with('asset')->get(),
@@ -165,29 +200,26 @@ class ResponsabilityCardListScreen extends Screen
     {
         $card->load(['civilServant.position', 'assignments.asset']);
 
-        // Cadena exclusiva de tarjetas normales (asignacion/descargo), excluyendo mal_estado
-        $normalTypes = ['asignacion', 'descargo'];
-
+        // Cadena exclusiva de tarjetas de mal estado
         $vienenCard = ResponsabilityCard::where('civil_servant_id', $card->civil_servant_id)
-            ->whereIn('type', $normalTypes)
+            ->where('type', 'mal_estado')
             ->where('id', '<', $card->id)
             ->orderBy('id', 'desc')
             ->first();
 
         $vanCard = ResponsabilityCard::where('civil_servant_id', $card->civil_servant_id)
-            ->whereIn('type', $normalTypes)
+            ->where('type', 'mal_estado')
             ->where('id', '>', $card->id)
             ->orderBy('id', 'asc')
             ->first();
 
-        // Calcular el Sumatorio Histórico de Vienen (solo tarjetas normales)
-        $vienenAmount = \App\Models\Assignment::whereHas('responsabilityCard', function($q) use ($card, $normalTypes) {
+        // Calcular el Sumatorio Histórico de Vienen (solo tarjetas de mal estado)
+        $vienenAmount = \App\Models\Assignment::whereHas('responsabilityCard', function($q) use ($card) {
             $q->where('civil_servant_id', $card->civil_servant_id)
-              ->whereIn('type', $normalTypes)
+              ->where('type', 'mal_estado')
               ->where('id', '<', $card->id);
         })->with(['asset', 'responsabilityCard'])->get()->sum(function($assignment) {
-            $value = (float) optional($assignment->asset)->value;
-            return $assignment->responsabilityCard->type === 'descargo' ? -$value : $value;
+            return (float) optional($assignment->asset)->value;
         });
 
         // Sumar lo de esta tarjeta
@@ -195,7 +227,7 @@ class ResponsabilityCardListScreen extends Screen
             return (float) optional($assignment->asset)->value;
         });
 
-        $vanAmount = $card->type === 'descargo' ? $vienenAmount - $cardAmount : $vienenAmount + $cardAmount;
+        $vanAmount = $vienenAmount + $cardAmount;
 
         $pdf = Pdf::loadView('pdf.responsability_card', [
             'card' => $card,
@@ -203,6 +235,7 @@ class ResponsabilityCardListScreen extends Screen
             'van'    => $vanCard ? 'TARJETA No. ' . $vanCard->assignment_code : '...............',
             'vienenAmount' => $vienenAmount,
             'vanAmount' => $vanAmount,
+            'overrideUnit' => 'Bienes en mal estado',
         ])->setPaper(array(0, 0, 612, 936), 'landscape');
 
         return $pdf->stream('Tarjeta_Responsabilidad_' . $card->assignment_code . '.pdf');
@@ -218,6 +251,6 @@ class ResponsabilityCardListScreen extends Screen
             $card->delete();
         });
 
-        Alert::info('La tarjeta de responsabilidad ha sido eliminada y sus bienes liberados.');
+        Alert::info('La tarjeta de mal estado ha sido eliminada y sus bienes liberados.');
     }
 }

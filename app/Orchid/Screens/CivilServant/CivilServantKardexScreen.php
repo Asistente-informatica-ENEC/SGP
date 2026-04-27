@@ -6,6 +6,8 @@ use App\Models\CivilServant;
 use App\Models\Asset;
 use App\Models\ResponsabilityCard;
 use App\Models\Assignment;
+use App\Orchid\Layouts\CivilServant\KardexAssetsListLayout;
+use App\Orchid\Layouts\CivilServant\KardexBadConditionLayout;
 use Illuminate\Http\Request;
 use Orchid\Screen\Actions\ModalToggle;
 use Orchid\Screen\Fields\Input;
@@ -28,6 +30,7 @@ class CivilServantKardexScreen extends Screen
         $search = request('search');
 
         $activeAssets = Asset::where('state', 'ASIGNADO')
+            ->with('latestAssignment.responsabilityCard')
             ->whereHas('latestAssignment', function ($q) use ($civilServant) {
                 $q->whereHas('responsabilityCard', function ($q2) use ($civilServant) {
                     $q2->where('civil_servant_id', $civilServant->id);
@@ -38,9 +41,29 @@ class CivilServantKardexScreen extends Screen
             })
             ->get();
 
+        $badConditionAssets = Asset::where('state', 'EN MAL ESTADO')
+            ->with(['assignments' => function ($q) use ($civilServant) {
+                $q->whereHas('responsabilityCard', function ($q2) use ($civilServant) {
+                    $q2->where('civil_servant_id', $civilServant->id)
+                       ->where('type', 'mal_estado');
+                });
+                $q->with('responsabilityCard');
+            }])
+            ->whereHas('assignments', function ($q) use ($civilServant) {
+                $q->whereHas('responsabilityCard', function ($q2) use ($civilServant) {
+                    $q2->where('civil_servant_id', $civilServant->id)
+                       ->where('type', 'mal_estado');
+                });
+            })
+            ->when($search, function ($query, $search) {
+                $query->where('sicoin', 'like', "%$search%");
+            })
+            ->get();
+
         return [
-            'civilServant' => $civilServant,
-            'activeAssets' => $activeAssets,
+            'civilServant'       => $civilServant,
+            'activeAssets'       => $activeAssets,
+            'badConditionAssets' => $badConditionAssets,
         ];
     }
 
@@ -56,6 +79,19 @@ class CivilServantKardexScreen extends Screen
 
     public function layout(): iterable
     {
+        // Solo mostrar pestaña de mal estado si este funcionario tiene tarjetas de ese tipo
+        $hasBadCondition = ResponsabilityCard::where('civil_servant_id', $this->civilServant->id)
+            ->where('type', 'mal_estado')
+            ->exists();
+
+        $tabs = [
+            'Bienes Asignados' => KardexAssetsListLayout::class,
+        ];
+
+        if ($hasBadCondition) {
+            $tabs['Bienes en Mal Estado'] = KardexBadConditionLayout::class;
+        }
+
         return [
             Layout::legend('civilServant', [
                 Sight::make('name', 'Funcionario'),
@@ -85,7 +121,10 @@ class CivilServantKardexScreen extends Screen
                 ])->alignEnd(),
             ]),
 
-            \App\Orchid\Layouts\CivilServant\KardexAssetsListLayout::class,
+            // Si solo hay una pestaña, mostramos la tabla directamente sin tabs
+            $hasBadCondition
+                ? Layout::tabs($tabs)
+                : KardexAssetsListLayout::class,
 
             Layout::modal('dischargeModal', [
                 Layout::rows([

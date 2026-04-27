@@ -200,3 +200,31 @@ Route::screen('responsability_cards/create', ResponsabilityCardEditScreen::class
     ->breadcrumbs(fn (Trail $trail) => $trail
         ->parent('platform.responsability_card.list')
         ->push('Crear', route('platform.responsability_card.create')));
+
+// Platform > Reportes
+Route::screen('reports', \App\Orchid\Screens\Report\ReportListScreen::class)
+    ->name('platform.report.list')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Módulo de Reportes', route('platform.report.list')));
+
+// Platform > Bienes en Mal Estado
+Route::screen('bad_condition_cards', \App\Orchid\Screens\BadConditionCard\BadConditionCardListScreen::class)
+    ->name('platform.bad_condition_card.list')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Bienes en Mal Estado', route('platform.bad_condition_card.list')));
+
+// Platform > Bienes en Mal Estado > Editar
+Route::screen('bad_condition_cards/{card}/edit', \App\Orchid\Screens\BadConditionCard\BadConditionCardEditScreen::class)
+    ->name('platform.bad_condition_card.edit')
+    ->breadcrumbs(fn (Trail $trail, $card) => $trail
+        ->parent('platform.bad_condition_card.list')
+        ->push('Editar', route('platform.bad_condition_card.edit', $card)));
+
+// Platform > Bienes en Mal Estado > Crear
+Route::screen('bad_condition_cards/create', \App\Orchid\Screens\BadConditionCard\BadConditionCardEditScreen::class)
+    ->name('platform.bad_condition_card.create')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.bad_condition_card.list')
+        ->push('Crear', route('platform.bad_condition_card.create')));

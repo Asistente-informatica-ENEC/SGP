@@ -168,6 +168,12 @@ class AssetListScreen extends Screen
               ->closeButton('Cerrar')
               ->size(Modal::SIZE_XL),
 
+            Layout::modal('assetHistoryModal', [
+                \App\Orchid\Layouts\Asset\AssetHistoryLayout::class
+            ])->async('asyncGetAssetHistory')
+              ->withoutApplyButton()
+              ->size(Modal::SIZE_LG),
+
             \App\Orchid\Layouts\Asset\AssetListLayout::class
         ];
     }
@@ -177,6 +183,17 @@ class AssetListScreen extends Screen
         $asset->load('latestAssignment.responsabilityCard.civilServant');
         return [
             'view_asset' => $asset,
+        ];
+    }
+
+    public function asyncGetAssetHistory(Asset $asset): array
+    {
+        return [
+            'view_asset' => $asset,
+            'assetHistory' => $asset->assignments()
+                ->with('responsabilityCard.civilServant')
+                ->orderBy('date', 'desc')
+                ->get(),
         ];
     }
 

@@ -130,7 +130,7 @@
             </tr>
             <tr>
                 <td>UNIDAD ADMINISTRATIVA</td>
-                <td class="line-bottom">{{ optional($card->civilServant)->unit }}</td>
+                <td class="line-bottom">{{ $overrideUnit ?? optional($card->civilServant)->unit }}</td>
                 <td style="text-align: right; padding-right: 5px;">CARGO</td>
                 <td class="line-bottom">{{ optional(optional($card->civilServant)->position)->name }}</td>
             </tr>

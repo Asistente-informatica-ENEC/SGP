@@ -71,6 +71,22 @@ class AssetListLayout extends Table
                 ->sort()
                 ->width('150px')
                 ->render(fn (Asset $asset) => $asset->date ? \Carbon\Carbon::parse($asset->date)->format('d-m-Y') : ''),
+
+            TD::make('Acciones')
+                ->align(TD::ALIGN_CENTER)
+                ->render(fn (Asset $asset) => \Orchid\Screen\Actions\DropDown::make()
+                    ->icon('bs.three-dots-vertical')
+                    ->list([
+                        ModalToggle::make('Ver Historial')
+                            ->icon('bs.clock-history')
+                            ->modal('assetHistoryModal')
+                            ->method('asyncGetAssetHistory')
+                            ->modalTitle('Historial del Bien - ' . $asset->sicoin)
+                            ->asyncParameters([
+                                'asset' => $asset->id,
+                            ]),
+                    ])
+                ),
         ];
     }
 

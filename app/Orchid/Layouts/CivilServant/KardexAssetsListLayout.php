@@ -32,6 +32,12 @@ class KardexAssetsListLayout extends Table
             TD::make('sicoin', 'SICOIN'),
             TD::make('description', 'Descripción')->render(fn($asset) => '<span title="' . e($asset->description) . '">' . \Illuminate\Support\Str::limit($asset->description, 50) . '</span>'),
             TD::make('value', 'Valor')->render(fn($asset) => 'Q ' . number_format($asset->value, 2)),
+            TD::make('tarjeta', 'Tarjeta de Responsabilidad')
+                ->render(fn (Asset $asset) =>
+                    $asset->latestAssignment?->responsabilityCard
+                        ? 'No. ' . $asset->latestAssignment->responsabilityCard->assignment_code
+                        : '—'
+                ),
             TD::make('Acciones')
                 ->align(TD::ALIGN_CENTER)
                 ->render(fn (Asset $asset) => ModalToggle::make('Descargar')

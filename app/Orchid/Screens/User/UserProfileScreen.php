@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types = 1)
-;
+declare(strict_types = 1);
 
 namespace App\Orchid\Screens\User;
 
@@ -23,7 +22,6 @@ class UserProfileScreen extends Screen
 {
     /**
      * Fetch data to be displayed on the screen.
-     *
      *
      * @return array
      */
@@ -58,16 +56,16 @@ class UserProfileScreen extends Screen
     public function commandBar(): iterable
     {
         return [
-            Button::make('Back to my account')
-            ->novalidate()
-            ->canSee(Impersonation::isSwitch())
-            ->icon('bs.people')
-            ->route('platform.switch.logout'),
+            Button::make('Volver a mi cuenta')
+                ->novalidate()
+                ->canSee(Impersonation::isSwitch())
+                ->icon('bs.people')
+                ->route('platform.switch.logout'),
 
-            Button::make('Sign out')
-            ->novalidate()
-            ->icon('bs.box-arrow-left')
-            ->route('platform.logout'),
+            Button::make('Cerrar sesión')
+                ->novalidate()
+                ->icon('bs.box-arrow-left')
+                ->route('platform.logout'),
         ];
     }
 
@@ -78,35 +76,35 @@ class UserProfileScreen extends Screen
     {
         return [
             Layout::block(UserEditLayout::class)
-            ->title(__('Profile Information'))
-            ->description(__("Update your account's profile information and email address."))
-            ->commands(
-            Button::make(__('Save'))
-            ->type(Color::BASIC())
-            ->icon('bs.check-circle')
-            ->method('save')
-        ),
+                ->title(__('Profile Information'))
+                ->description(__("Update your account's profile information and email address."))
+                ->commands(
+                    Button::make(__('Save'))
+                        ->type(Color::BASIC())
+                        ->icon('bs.check-circle')
+                        ->method('save')
+                ),
 
             Layout::block(ProfilePasswordLayout::class)
-            ->title(__('Actualizar Contraseña'))
-            ->description(__('Asegurese su cuenta usando una contraseña larga y/o aleatoria por seguridad.'))
-            ->commands(
-            Button::make(__('Update password'))
-            ->type(Color::BASIC())
-            ->icon('bs.check-circle')
-            ->method('changePassword')
-        ),
+                ->title(__('Actualizar Contraseña'))
+                ->description(__('Asegurese su cuenta usando una contraseña larga y/o aleatoria por seguridad.'))
+                ->commands(
+                    Button::make(__('Update password'))
+                        ->type(Color::BASIC())
+                        ->icon('bs.check-circle')
+                        ->method('changePassword')
+                ),
         ];
     }
 
     public function save(Request $request): void
     {
         $request->validate([
-            'user.name' => 'required|string',
+            'user.name'   => 'required|string',
             'user.avatar' => 'string|nullable',
-            'user.email' => [
+            'user.email'  => [
                 'required',
-                Rule::unique(User::class , 'email')->ignore($request->user()),
+                Rule::unique(User::class, 'email')->ignore($request->user()),
             ],
         ]);
 
@@ -122,7 +120,7 @@ class UserProfileScreen extends Screen
         $guard = config('platform.guard', 'web');
         $request->validate([
             'old_password' => 'required|current_password:' . $guard,
-            'password' => 'required|confirmed|different:old_password',
+            'password'     => 'required|confirmed|different:old_password',
         ]);
 
         tap($request->user(), function ($user) use ($request) {

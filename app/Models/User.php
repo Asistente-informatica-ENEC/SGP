@@ -19,6 +19,7 @@ class User extends Authenticatable
         'email',
         'password',
         'avatar',
+        'must_change_password',
     ];
 
     /**
@@ -40,7 +41,22 @@ class User extends Authenticatable
     protected $casts = [
         'permissions'          => 'array',
         'email_verified_at'    => 'datetime',
+        'must_change_password' => 'boolean',
     ];
+
+    /**
+     * Auto-clear the must_change_password flag when the password is updated.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::updating(function (self $user) {
+            if ($user->isDirty('password')) {
+                $user->must_change_password = false;
+            }
+        });
+    }
 
     /**
      * The attributes for which you can use filters in url.
