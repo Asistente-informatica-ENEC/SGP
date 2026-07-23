@@ -35,4 +35,9 @@ class ResponsabilityCard extends Model
     {
         return $this->hasMany(Assignment::class);
     }
+
+    public function getFormattedCodeAttribute(): string
+    {
+        return str_pad($this->assignment_code, 3, '0', STR_PAD_LEFT);
+    }
 }

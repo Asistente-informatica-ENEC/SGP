@@ -115,7 +115,8 @@ class ResponsabilityCardListScreen extends Screen
                             'card' => request('card'),
                         ])
                         ->rawClick()
-                        ->canSee(request()->has('card')),
+                        ->canSee(request()->has('card'))
+                        ->set('formtarget', '_blank'),
                 ]),
                 ResponsabilityCardDetailsLayout::class,
             ])

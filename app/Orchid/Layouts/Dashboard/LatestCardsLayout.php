@@ -30,7 +30,7 @@ class LatestCardsLayout extends Table
     {
         return [
             TD::make('assignment_code', 'No. Tarjeta')
-                ->render(fn (ResponsabilityCard $card) => 'No. ' . $card->assignment_code),
+                ->render(fn (ResponsabilityCard $card) => 'No. ' . $card->formatted_code),
 
             TD::make('type', 'Tipo')
                 ->render(fn (ResponsabilityCard $card) => 
@@ -54,7 +54,8 @@ class LatestCardsLayout extends Table
                                 ->icon('bs.file-earmark-pdf')
                                 ->method('exportPdf')
                                 ->parameters(['card' => $card->id])
-                                ->rawClick(),
+                                ->rawClick()
+                                ->set('formtarget', '_blank'),
 
                             Button::make('Emitir Excel')
                                 ->icon('bs.file-earmark-excel')

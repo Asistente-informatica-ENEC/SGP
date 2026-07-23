@@ -39,7 +39,7 @@ class AssetHistoryLayout extends Table
 
             TD::make('responsabilityCard.assignment_code', 'Comprobante')
                 ->render(function (Assignment $assignment) {
-                    return 'No. ' . ($assignment->responsabilityCard->assignment_code ?? 'N/A');
+                    return 'No. ' . ($assignment->responsabilityCard->formatted_code ?? 'N/A');
                 }),
 
             TD::make('observation', 'Observaciones')

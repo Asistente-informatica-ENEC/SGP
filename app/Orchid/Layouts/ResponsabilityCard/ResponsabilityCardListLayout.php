@@ -28,7 +28,7 @@ class ResponsabilityCardListLayout extends Table
             TD::make('assignment_code', 'Tarjeta')
                 ->sort()
                 ->filter(TD::FILTER_TEXT)
-                ->render(fn (ResponsabilityCard $card) => ModalToggle::make('No. ' . $card->assignment_code)
+                ->render(fn (ResponsabilityCard $card) => ModalToggle::make('No. ' . $card->formatted_code)
                     ->modal('modalResponsabilityCard')
                     ->method('asyncGetResponsabilityCard')
                     ->asyncParameters([
@@ -73,7 +73,8 @@ class ResponsabilityCardListLayout extends Table
                             ->method('exportPdf', [
                                 'card' => $card->id,
                             ])
-                            ->rawClick(),
+                            ->rawClick()
+                            ->set('formtarget', '_blank'),
 
                         Button::make('Eliminar')
                             ->icon('bs.trash')

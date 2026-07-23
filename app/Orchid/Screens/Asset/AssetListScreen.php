@@ -78,7 +78,8 @@ class AssetListScreen extends Screen
                     \Orchid\Screen\Actions\Button::make('Exportar PDF')
                         ->icon('bs.file-pdf')
                         ->method('exportPdf')
-                        ->rawClick(),
+                        ->rawClick()
+                        ->set('formtarget', '_blank'),
 
                     \Orchid\Screen\Actions\Button::make('Descargar Plantilla')
                         ->method('downloadTemplate')
@@ -369,12 +370,20 @@ class AssetListScreen extends Screen
         }
 
         try {
-            DB::transaction(function () use ($assets, $observations) {
-                $this->processBatchDischargeNormal($assets, $observations);
+            $result = DB::transaction(function () use ($assets, $observations) {
+                return $this->processBatchDischargeNormal($assets, $observations);
             });
 
             Log::info('batchDischargeNormal completed successfully', ['user_id' => $request->user()?->id ?? null]);
-            Alert::success('Descarga normal procesada correctamente.');
+
+            $parts = [];
+            if (!empty($result['descargoCards'])) {
+                foreach ($result['descargoCards'] as $dc) {
+                    $parts[] = "Descargo No. {$dc['code']} para {$dc['servant']}";
+                }
+            }
+            $message = 'Descarga normal procesada correctamente. ' . implode('. ', $parts) . '.';
+            Alert::success($message);
         } catch (\Exception $e) {
             Log::error('Error in batchDischargeNormal', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             Alert::error('Error al procesar descarga normal: ' . $e->getMessage());
@@ -456,16 +465,17 @@ class AssetListScreen extends Screen
     /**
      * Procesa descarga de activos ASIGNADO agrupados por funcionario
      */
-    private function processBatchDischargeNormal($assignedAssets, $observations)
+    private function processBatchDischargeNormal($assignedAssets, $observations): array
     {
-        // Agrupar por funcionario
+        $descargoCards = [];
+
         $groupedByServant = $assignedAssets->groupBy(function ($asset) {
             return $asset->latestAssignment?->responsabilityCard?->civil_servant_id ?? 'unknown';
         });
 
         foreach ($groupedByServant as $servantId => $groupAssets) {
             if ($servantId === 'unknown') {
-                continue; // Saltar activos sin asignación clara
+                continue;
             }
 
             $servant = CivilServant::find($servantId);
@@ -473,10 +483,8 @@ class AssetListScreen extends Screen
                 continue;
             }
 
-            // Generar correlativo de descargo para este funcionario
             $descargoCode = $this->generateNextAssignmentCodeForServant($servantId, 'descargo');
 
-            // Crear tarjeta de descargo
             $descargoCard = ResponsabilityCard::create([
                 'civil_servant_id' => $servantId,
                 'assign_name' => $servant->name,
@@ -487,7 +495,6 @@ class AssetListScreen extends Screen
                 'update_date' => now(),
             ]);
 
-            // Crear asignaciones y cambiar estado a DISPONIBLE
             foreach ($groupAssets as $asset) {
                 Assignment::create([
                     'responsability_card_id' => $descargoCard->id,
@@ -498,7 +505,14 @@ class AssetListScreen extends Screen
 
                 $asset->update(['state' => 'DISPONIBLE']);
             }
+
+            $descargoCards[] = [
+                'code' => $descargoCode,
+                'servant' => $servant->name,
+            ];
         }
+
+        return ['descargoCards' => $descargoCards];
     }
 
     /**
@@ -623,34 +637,35 @@ class AssetListScreen extends Screen
     }
 
     /**
-     * Genera el siguiente código correlativo para un funcionario y tipo de tarjeta
+     * Genera el siguiente código correlativo global.
+     * asginacion y descargo comparten secuencia; mal_estado y otros tipos
+     * tienen su propia secuencia global.
      */
     private function generateNextAssignmentCodeForServant(int $civilServantId, ?string $type = null): string
     {
-        $lastCardOfServant = ResponsabilityCard::where('civil_servant_id', $civilServantId)
-            ->orderBy('id', 'desc')
-            ->first();
+        if ($type === 'descargo' || $type === 'asignacion') {
+            $lastCard = ResponsabilityCard::whereIn('type', ['asignacion', 'descargo'])
+                ->orderBy('id', 'desc')->first();
+        } elseif ($type !== null) {
+            $lastCard = ResponsabilityCard::where('type', $type)
+                ->orderBy('id', 'desc')->first();
+        } else {
+            $lastCard = ResponsabilityCard::orderBy('id', 'desc')->first();
+        }
 
         $newCode = '1';
-        if ($lastCardOfServant && $lastCardOfServant->assignment_code) {
-            preg_match('/\d+/', $lastCardOfServant->assignment_code, $matches);
-            if (!empty($matches)) {
-                $newCode = (string) (((int) $matches[0]) + 1);
-            }
+        if ($lastCard && $lastCard->assignment_code) {
+            $newCode = (string) (((int) $lastCard->assignment_code) + 1);
         }
 
         if ($type === 'descargo' || $type === 'asignacion') {
-            while (ResponsabilityCard::where('civil_servant_id', $civilServantId)
-                ->whereIn('type', ['asignacion', 'descargo'])
-                ->where('assignment_code', $newCode)
-                ->exists()) {
+            while (ResponsabilityCard::whereIn('type', ['asignacion', 'descargo'])
+                ->where('assignment_code', $newCode)->exists()) {
                 $newCode = (string) (((int) $newCode) + 1);
             }
         } elseif ($type !== null) {
-            while (ResponsabilityCard::where('civil_servant_id', $civilServantId)
-                ->where('type', $type)
-                ->where('assignment_code', $newCode)
-                ->exists()) {
+            while (ResponsabilityCard::where('type', $type)
+                ->where('assignment_code', $newCode)->exists()) {
                 $newCode = (string) (((int) $newCode) + 1);
             }
         } else {

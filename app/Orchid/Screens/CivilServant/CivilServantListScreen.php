@@ -55,7 +55,8 @@ class CivilServantListScreen extends Screen
                     \Orchid\Screen\Actions\Button::make('Exportar PDF')
                         ->icon('bs.file-pdf')
                         ->method('exportPdf')
-                        ->rawClick(),
+                        ->rawClick()
+                        ->set('formtarget', '_blank'),
 
                     \Orchid\Screen\Actions\Button::make('Descargar Plantilla')
                         ->method('downloadTemplate')

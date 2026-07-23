@@ -167,39 +167,35 @@ class CivilServantKardexScreen extends Screen
     }
 
     /**
-     * Genera el siguiente código de asignación correlativo para un funcionario específico.
-     * Busca la última tarjeta de ese funcionario (independientemente del tipo) e incrementa.
-     * Si se especifica tipo, verifica unicidad solo dentro de ese tipo para el funcionario.
-     * 
-     * @param int $civilServantId ID del funcionario
-     * @param string|null $type Tipo de tarjeta (null = cualquiera, 'descargo', 'mal_estado', etc.)
+     * Genera el siguiente código correlativo global.
+     * asginacion y descargo comparten secuencia; mal_estado y otros tipos
+     * tienen su propia secuencia global.
      */
     private function generateNextAssignmentCodeForServant(int $civilServantId, ?string $type = null): string
     {
-        // 1. Buscar la ÚLTIMA tarjeta de este funcionario (de cualquier tipo)
-        $lastCardOfServant = ResponsabilityCard::where('civil_servant_id', $civilServantId)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $newCode = '1';
-        if ($lastCardOfServant && $lastCardOfServant->assignment_code) {
-            preg_match('/\d+/', $lastCardOfServant->assignment_code, $matches);
-            if (!empty($matches)) {
-                $newCode = (string) (((int) $matches[0]) + 1);
-            } else {
-                $newCode = $lastCardOfServant->assignment_code;
-                $newCode++;
-            }
+        if ($type === 'descargo' || $type === 'asignacion') {
+            $lastCard = ResponsabilityCard::whereIn('type', ['asignacion', 'descargo'])
+                ->orderBy('id', 'desc')->first();
+        } elseif ($type !== null) {
+            $lastCard = ResponsabilityCard::where('type', $type)
+                ->orderBy('id', 'desc')->first();
+        } else {
+            $lastCard = ResponsabilityCard::orderBy('id', 'desc')->first();
         }
 
-        // 2. Verificar que el código no esté duplicado
-        // Si se especificó tipo, comprobar solo dentro del mismo funcionario y tipo
-        // En caso contrario, comprobar globalmente
-        if ($type !== null) {
-            while (ResponsabilityCard::where('civil_servant_id', $civilServantId)
-                ->where('type', $type)
-                ->where('assignment_code', $newCode)
-                ->exists()) {
+        $newCode = '1';
+        if ($lastCard && $lastCard->assignment_code) {
+            $newCode = (string) (((int) $lastCard->assignment_code) + 1);
+        }
+
+        if ($type === 'descargo' || $type === 'asignacion') {
+            while (ResponsabilityCard::whereIn('type', ['asignacion', 'descargo'])
+                ->where('assignment_code', $newCode)->exists()) {
+                $newCode = (string) (((int) $newCode) + 1);
+            }
+        } elseif ($type !== null) {
+            while (ResponsabilityCard::where('type', $type)
+                ->where('assignment_code', $newCode)->exists()) {
                 $newCode = (string) (((int) $newCode) + 1);
             }
         } else {

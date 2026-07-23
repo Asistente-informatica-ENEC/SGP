@@ -51,7 +51,7 @@ class KardexBadConditionLayout extends Table
             TD::make('tarjeta', 'Tarjeta de Mal Estado')
                 ->render(fn (Asset $asset) =>
                     $asset->assignments->first()?->responsabilityCard
-                        ? 'No. ' . $asset->assignments->first()->responsabilityCard->assignment_code
+                        ? 'No. ' . $asset->assignments->first()->responsabilityCard->formatted_code
                         : '—'
                 ),
 

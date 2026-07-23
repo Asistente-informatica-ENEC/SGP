@@ -28,7 +28,7 @@ class BadConditionCardListLayout extends Table
             TD::make('assignment_code', 'Tarjeta')
                 ->sort()
                 ->filter(TD::FILTER_TEXT)
-                ->render(fn (ResponsabilityCard $card) => ModalToggle::make('No. ' . $card->assignment_code)
+                ->render(fn (ResponsabilityCard $card) => ModalToggle::make('No. ' . $card->formatted_code)
                     ->modal('modalBadConditionCard')
                     ->method('asyncGetBadConditionCard')
                     ->asyncParameters([
@@ -66,7 +66,8 @@ class BadConditionCardListLayout extends Table
                             ->method('exportPdf', [
                                 'card' => $card->id,
                             ])
-                            ->rawClick(),
+                            ->rawClick()
+                            ->set('formtarget', '_blank'),
 
                         Button::make('Eliminar')
                             ->icon('bs.trash')

@@ -37,7 +37,7 @@ class KardexAssetsListLayout extends Table
             TD::make('tarjeta', 'Tarjeta de Responsabilidad')
                 ->render(fn (Asset $asset) =>
                     $asset->latestAssignment?->responsabilityCard
-                        ? 'No. ' . $asset->latestAssignment->responsabilityCard->assignment_code
+                        ? 'No. ' . $asset->latestAssignment->responsabilityCard->formatted_code
                         : '—'
                 ),
             TD::make('Acciones')
