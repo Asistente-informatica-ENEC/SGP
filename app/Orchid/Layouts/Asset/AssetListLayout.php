@@ -28,6 +28,11 @@ class AssetListLayout extends Table
     protected function columns(): iterable
     {
         return [
+            TD::make('select', '')
+                ->width('40px')
+                ->align(TD::ALIGN_CENTER)
+                ->render(fn (Asset $asset) => '<input type="checkbox" class="asset-checkbox" name="selected_assets" value="' . $asset->id . '" data-state="' . $asset->state . '" data-sicoin="' . e($asset->sicoin) . '" data-description="' . e($asset->description) . '">'),
+            
             TD::make('sicoin', 'SICOIN')
                 ->sort()
                 ->filter(TD::FILTER_TEXT)

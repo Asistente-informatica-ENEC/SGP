@@ -6,6 +6,8 @@ use App\Models\Asset;
 use Orchid\Screen\Layouts\Table;
 use Orchid\Screen\TD;
 use Orchid\Screen\Actions\ModalToggle;
+use Orchid\Screen\Fields\Group;
+use Orchid\Support\Color;
 
 class KardexAssetsListLayout extends Table
 {
@@ -40,15 +42,26 @@ class KardexAssetsListLayout extends Table
                 ),
             TD::make('Acciones')
                 ->align(TD::ALIGN_CENTER)
-                ->render(fn (Asset $asset) => ModalToggle::make('Descargar')
-                    ->icon('bs.arrow-down-circle')
-                    ->modal('dischargeModal')
-                    ->method('dischargeAsset')
-                    ->asyncParameters([
-                        'asset' => $asset->id,
-                    ])
-                    ->type(\Orchid\Support\Color::DANGER)
-                ),
+                ->width('320px')
+                ->render(fn (Asset $asset) => Group::make([
+                    ModalToggle::make('Descargar')
+                        ->icon('bs.arrow-down-circle')
+                        ->modal('dischargeModal')
+                        ->method('dischargeAsset')
+                        ->asyncParameters([
+                            'asset' => $asset->id,
+                        ])
+                        ->type(Color::DANGER),
+
+                    ModalToggle::make('Mal Estado')
+                        ->icon('bs.exclamation-triangle')
+                        ->modal('dischargeBadConditionModal')
+                        ->method('dischargeAssetBadCondition')
+                        ->asyncParameters([
+                            'asset' => $asset->id,
+                        ])
+                        ->type(Color::WARNING),
+                ])),
         ];
     }
 

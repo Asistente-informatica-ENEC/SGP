@@ -30,6 +30,13 @@ class CardsChartLayout extends Chart
     protected $target = 'cardsChart';
 
     /**
+     * Colors: Azul para tarjetas normales, Amarillo para tarjetas de mal estado.
+     *
+     * @var array
+     */
+    protected $colors = ['#0d6efd', '#ffc107'];
+
+    /**
      * Determines whether to display the export button.
      *
      * @var bool

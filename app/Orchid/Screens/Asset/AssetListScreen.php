@@ -3,6 +3,9 @@
 namespace App\Orchid\Screens\Asset;
 
 use App\Models\Asset;
+use App\Models\CivilServant;
+use App\Models\ResponsabilityCard;
+use App\Models\Assignment;
 use Orchid\Screen\Actions\Link;
 use Orchid\Screen\Actions\Button;
 use Orchid\Screen\Actions\DropDown;
@@ -18,6 +21,9 @@ use Orchid\Support\Facades\Layout;
 use Orchid\Screen\Layouts\Modal;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 use App\Imports\AssetImport;
 use App\Exports\AssetTemplateExport;
@@ -44,6 +50,24 @@ class AssetListScreen extends Screen
     public function commandBar(): iterable
     {
         return [
+            \Orchid\Screen\Actions\DropDown::make('Descargo de bienes')
+                ->icon('bs.download')
+                ->list([
+                    \Orchid\Screen\Actions\ModalToggle::make('Descargar Seleccionados')
+                        ->icon('bs.download')
+                        ->modal('batchDischargeNormalModal')
+                        ->method('batchDischargeNormal')
+                        ->id('batch-discharge-normal-btn')
+                        ->title('Descarga normal (DISPONIBLE)'),
+
+                    \Orchid\Screen\Actions\ModalToggle::make('Descargar Mal Estado')
+                        ->icon('bs.exclamation-triangle')
+                        ->modal('batchDischargeBadConditionModal')
+                        ->method('batchDischargeBadCondition')
+                        ->id('batch-discharge-bad-condition-btn')
+                        ->title('Descarga en mal estado'),
+                ]),
+
             \Orchid\Screen\Actions\DropDown::make('Acciones')
                 ->icon('bs.caret-down')
                 ->list([
@@ -174,6 +198,17 @@ class AssetListScreen extends Screen
               ->withoutApplyButton()
               ->size(Modal::SIZE_LG),
 
+            Layout::modal('batchDischargeNormalModal', [
+                Layout::view('orchid.batch-discharge-normal'),
+            ])->title('Descargar Bienes - Estado DISPONIBLE')
+              ->withoutApplyButton(),
+
+            Layout::modal('batchDischargeBadConditionModal', [
+                Layout::view('orchid.batch-discharge-bad-condition'),
+            ])->title('Descargar Bienes en Mal Estado')
+              ->withoutApplyButton(),
+
+            Layout::view('orchid.asset-batch-selector-script'),
             \App\Orchid\Layouts\Asset\AssetListLayout::class
         ];
     }
@@ -278,5 +313,352 @@ class AssetListScreen extends Screen
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.asset_report', compact('assets', 'filters'));
         
         return $pdf->download('reporte_bienes.pdf');
+    }
+
+    /**
+     * Procesa la descarga masiva de activos agrupados por funcionario
+     * (o por encargado si son activos en mal estado)
+     */
+    public function batchDischargeNormal(Request $request)
+    {
+        Log::info('batchDischargeNormal called', ['user_id' => $request->user()?->id ?? null]);
+
+        Log::info('batchDischargeNormal raw input', [
+            'selected_asset_ids_normal' => $request->input('selected_asset_ids_normal'),
+            'observations_normal' => $request->input('observations_normal'),
+        ]);
+
+        $request->validate([
+            'selected_asset_ids_normal' => 'required|array|min:1',
+            'selected_asset_ids_normal.*' => 'required|integer|exists:assets,id',
+            'observations_normal' => 'required|array',
+            'observations_normal.*' => 'required|string|max:500',
+        ], [
+            'selected_asset_ids_normal.min' => 'Debe seleccionar al menos un bien.',
+        ]);
+
+        $assetIds = $request->input('selected_asset_ids_normal');
+        $observations = $request->input('observations_normal', []);
+
+        Log::info('batchDischargeNormal validation passed', [
+            'user_id' => $request->user()?->id ?? null,
+            'asset_count' => count($assetIds),
+        ]);
+
+        $assets = Asset::with('latestAssignment.responsabilityCard.civilServant')
+            ->whereIn('id', $assetIds)
+            ->get();
+
+        if ($assets->isEmpty()) {
+            Alert::warning('No se encontraron bienes para procesar.');
+            return redirect()->route('platform.asset.list');
+        }
+
+        $invalidStates = $assets->where('state', '!=', 'ASIGNADO');
+        if ($invalidStates->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'selected_asset_ids_normal' => 'Solo puede descargar bienes en estado ASIGNADO con esta acción.',
+            ]);
+        }
+
+        $unknownAssets = $assets->filter(fn($asset) => !$asset->latestAssignment || !$asset->latestAssignment->responsabilityCard);
+        if ($unknownAssets->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'selected_asset_ids_normal' => 'Algunos bienes no tienen una asignación completa o responsable asociado.',
+            ]);
+        }
+
+        try {
+            DB::transaction(function () use ($assets, $observations) {
+                $this->processBatchDischargeNormal($assets, $observations);
+            });
+
+            Log::info('batchDischargeNormal completed successfully', ['user_id' => $request->user()?->id ?? null]);
+            Alert::success('Descarga normal procesada correctamente.');
+        } catch (\Exception $e) {
+            Log::error('Error in batchDischargeNormal', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Alert::error('Error al procesar descarga normal: ' . $e->getMessage());
+        }
+
+        return redirect()->route('platform.asset.list');
+    }
+
+    public function batchDischargeBadCondition(Request $request)
+    {
+        Log::info('batchDischargeBadCondition called', ['user_id' => $request->user()?->id ?? null]);
+
+        Log::info('batchDischargeBadCondition raw input', [
+            'selected_asset_ids_bad_condition' => $request->input('selected_asset_ids_bad_condition'),
+        ]);
+
+        $request->validate([
+            'selected_asset_ids_bad_condition' => 'required|array|min:1',
+            'selected_asset_ids_bad_condition.*' => 'required|integer|exists:assets,id',
+            'observations_bad_condition' => 'required|array',
+            'observations_bad_condition.*' => 'required|string|max:500',
+        ], [
+            'selected_asset_ids_bad_condition.min' => 'Debe seleccionar al menos un bien.',
+        ]);
+
+        $assetIds = $request->input('selected_asset_ids_bad_condition');
+        $observations = $request->input('observations_bad_condition', []);
+        $currentUser = $request->user();
+
+        $encargado = CivilServant::where('name', $currentUser->name)->first();
+        if (!$encargado) {
+            throw ValidationException::withMessages([
+                'selected_asset_ids_bad_condition' => 'No se encontró el funcionario encargado de activos fijos.',
+            ]);
+        }
+
+        $assets = Asset::with('latestAssignment.responsabilityCard.civilServant')
+            ->whereIn('id', $assetIds)
+            ->get();
+        if ($assets->isEmpty()) {
+            Alert::warning('No se encontraron bienes para procesar.');
+            return redirect()->route('platform.asset.list');
+        }
+
+        $invalidStates = $assets->where('state', '!=', 'ASIGNADO');
+        if ($invalidStates->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'selected_asset_ids_bad_condition' => 'Solo puede descargar bienes en estado ASIGNADO con esta acción.',
+            ]);
+        }
+
+        try {
+            $result = DB::transaction(function () use ($assets, $observations, $encargado) {
+                return $this->processBatchBadCondition($assets, $observations, $encargado);
+            });
+
+            Log::info('batchDischargeBadCondition completed successfully', ['user_id' => $request->user()?->id ?? null]);
+
+            $parts = [];
+            if (!empty($result['descargoCards'])) {
+                foreach ($result['descargoCards'] as $dc) {
+                    $parts[] = "Descargo No. {$dc['code']} para {$dc['servant']}";
+                }
+            }
+            if (!empty($result['malEstadoCards'])) {
+                $codes = implode(', ', $result['malEstadoCodes']);
+                $parts[] = "Tarjeta(s) de Mal Estado No. {$codes} para {$result['encargado']}";
+            }
+            $message = 'Descarga en mal estado procesada correctamente. ' . implode('. ', $parts) . '.';
+            Alert::success($message);
+        } catch (\Exception $e) {
+            Log::error('Error in batchDischargeBadCondition', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Alert::error('Error al procesar descarga en mal estado: ' . $e->getMessage());
+        }
+
+        return redirect()->route('platform.asset.list');
+    }
+
+    /**
+     * Procesa descarga de activos ASIGNADO agrupados por funcionario
+     */
+    private function processBatchDischargeNormal($assignedAssets, $observations)
+    {
+        // Agrupar por funcionario
+        $groupedByServant = $assignedAssets->groupBy(function ($asset) {
+            return $asset->latestAssignment?->responsabilityCard?->civil_servant_id ?? 'unknown';
+        });
+
+        foreach ($groupedByServant as $servantId => $groupAssets) {
+            if ($servantId === 'unknown') {
+                continue; // Saltar activos sin asignación clara
+            }
+
+            $servant = CivilServant::find($servantId);
+            if (!$servant) {
+                continue;
+            }
+
+            // Generar correlativo de descargo para este funcionario
+            $descargoCode = $this->generateNextAssignmentCodeForServant($servantId, 'descargo');
+
+            // Crear tarjeta de descargo
+            $descargoCard = ResponsabilityCard::create([
+                'civil_servant_id' => $servantId,
+                'assign_name' => $servant->name,
+                'role' => $servant->position?->name ?? 'Sin Puesto',
+                'assignment_code' => $descargoCode,
+                'type' => 'descargo',
+                'assign_date' => now(),
+                'update_date' => now(),
+            ]);
+
+            // Crear asignaciones y cambiar estado a DISPONIBLE
+            foreach ($groupAssets as $asset) {
+                Assignment::create([
+                    'responsability_card_id' => $descargoCard->id,
+                    'asset_id' => $asset->id,
+                    'observation' => $observations[$asset->id] ?? '',
+                    'date' => now(),
+                ]);
+
+                $asset->update(['state' => 'DISPONIBLE']);
+            }
+        }
+    }
+
+    /**
+     * Procesa descarga de activos en mal estado:
+     * 1. Crea tarjeta de descargo para cada funcionario original
+     * 2. Cambia estado a EN MAL ESTADO
+     * 3. Crea tarjetas de mal estado para el encargado de activos fijos
+     *
+     * @return array Información de las tarjetas generadas
+     */
+    private function processBatchBadCondition($badConditionAssets, $observations, $encargado): array
+    {
+        if (!$encargado) {
+            throw new \Exception('Encargado de activos fijos no definido.');
+        }
+
+        $assetIds = $badConditionAssets->pluck('id')->toArray();
+        $descargoCards = [];
+        $malEstadoCodes = [];
+
+        // 1. Agrupar bienes por funcionario actual y crear tarjeta de descargo por cada uno
+        $groupedByServant = $badConditionAssets->groupBy(function ($asset) {
+            return $asset->latestAssignment?->responsabilityCard?->civil_servant_id ?? 'unknown';
+        });
+
+        foreach ($groupedByServant as $servantId => $groupAssets) {
+            if ($servantId === 'unknown') continue;
+
+            $servant = CivilServant::find($servantId);
+            if (!$servant) continue;
+
+            $descargoCode = $this->generateNextAssignmentCodeForServant($servantId, 'descargo');
+
+            $descargoCard = ResponsabilityCard::create([
+                'civil_servant_id' => $servantId,
+                'assign_name' => $servant->name,
+                'role' => $servant->position?->name ?? 'Sin Puesto',
+                'assignment_code' => $descargoCode,
+                'type' => 'descargo',
+                'assign_date' => now(),
+                'update_date' => now(),
+            ]);
+
+            foreach ($groupAssets as $asset) {
+                Assignment::create([
+                    'responsability_card_id' => $descargoCard->id,
+                    'asset_id' => $asset->id,
+                    'observation' => $observations[$asset->id] ?? '',
+                    'date' => now(),
+                ]);
+            }
+
+            $descargoCards[] = [
+                'code' => $descargoCode,
+                'servant' => $servant->name,
+            ];
+        }
+
+        // 2. Cambiar estado a EN MAL ESTADO
+        Asset::whereIn('id', $assetIds)->update(['state' => 'EN MAL ESTADO']);
+
+        // 3. Crear tarjetas de mal estado para el encargado (empaquetado inteligente)
+        $assets = Asset::whereIn('id', $assetIds)->get()->keyBy('id');
+        $chunks = [];
+        $currentChunk = [];
+        $currentLines = 0;
+        $maxLines = 18;
+
+        foreach ($assetIds as $id) {
+            if (!isset($assets[$id])) continue;
+            $asset = $assets[$id];
+            $lines = ceil(mb_strlen($asset->description ?? '') / 80) + 1;
+
+            if ($currentLines + $lines > $maxLines && count($currentChunk) > 0) {
+                $chunks[] = $currentChunk;
+                $currentChunk = [];
+                $currentLines = 0;
+            }
+
+            $currentChunk[] = $id;
+            $currentLines += $lines;
+        }
+        if (!empty($currentChunk)) {
+            $chunks[] = $currentChunk;
+        }
+
+        $currentCode = $this->generateNextAssignmentCodeForServant($encargado->id, 'mal_estado');
+
+        foreach ($chunks as $index => $chunkAssetIds) {
+            if ($index > 0) {
+                $currentCode = (string) (((int) $currentCode) + 1);
+            }
+
+            $malEstadoCard = ResponsabilityCard::create([
+                'civil_servant_id' => $encargado->id,
+                'assign_name' => $encargado->name,
+                'role' => $encargado->position?->name ?? 'Sin Puesto',
+                'assignment_code' => $currentCode,
+                'type' => 'mal_estado',
+                'assign_date' => now(),
+                'update_date' => now(),
+            ]);
+
+            foreach ($chunkAssetIds as $aId) {
+                Assignment::create([
+                    'responsability_card_id' => $malEstadoCard->id,
+                    'asset_id' => $aId,
+                    'date' => now(),
+                    'observation' => $observations[$aId] ?? '',
+                ]);
+            }
+
+            $malEstadoCodes[] = $currentCode;
+        }
+
+        return [
+            'descargoCards' => $descargoCards,
+            'malEstadoCodes' => $malEstadoCodes,
+            'malEstadoCards' => $malEstadoCodes,
+            'encargado' => $encargado->name,
+        ];
+    }
+
+    /**
+     * Genera el siguiente código correlativo para un funcionario y tipo de tarjeta
+     */
+    private function generateNextAssignmentCodeForServant(int $civilServantId, ?string $type = null): string
+    {
+        $lastCardOfServant = ResponsabilityCard::where('civil_servant_id', $civilServantId)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $newCode = '1';
+        if ($lastCardOfServant && $lastCardOfServant->assignment_code) {
+            preg_match('/\d+/', $lastCardOfServant->assignment_code, $matches);
+            if (!empty($matches)) {
+                $newCode = (string) (((int) $matches[0]) + 1);
+            }
+        }
+
+        if ($type === 'descargo' || $type === 'asignacion') {
+            while (ResponsabilityCard::where('civil_servant_id', $civilServantId)
+                ->whereIn('type', ['asignacion', 'descargo'])
+                ->where('assignment_code', $newCode)
+                ->exists()) {
+                $newCode = (string) (((int) $newCode) + 1);
+            }
+        } elseif ($type !== null) {
+            while (ResponsabilityCard::where('civil_servant_id', $civilServantId)
+                ->where('type', $type)
+                ->where('assignment_code', $newCode)
+                ->exists()) {
+                $newCode = (string) (((int) $newCode) + 1);
+            }
+        } else {
+            while (ResponsabilityCard::where('assignment_code', $newCode)->exists()) {
+                $newCode = (string) (((int) $newCode) + 1);
+            }
+        }
+
+        return $newCode;
     }
 }

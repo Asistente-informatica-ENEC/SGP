@@ -9,6 +9,7 @@ use App\Models\Assignment;
 use App\Orchid\Layouts\CivilServant\KardexAssetsListLayout;
 use App\Orchid\Layouts\CivilServant\KardexBadConditionLayout;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Orchid\Screen\Actions\ModalToggle;
 use Orchid\Screen\Fields\Input;
 use Orchid\Screen\Screen;
@@ -18,6 +19,7 @@ use Orchid\Screen\Sight;
 use Orchid\Screen\TD;
 use Orchid\Screen\Fields\Group;
 use Orchid\Support\Color;
+use Illuminate\Support\Facades\DB;
 
 class CivilServantKardexScreen extends Screen
 {
@@ -126,18 +128,34 @@ class CivilServantKardexScreen extends Screen
                 ? Layout::tabs($tabs)
                 : KardexAssetsListLayout::class,
 
+            // Modal para descargo normal (botón rojo)
             Layout::modal('dischargeModal', [
                 Layout::rows([
                     Input::make('discharge_asset_id')->type('hidden'),
                     Input::make('observation')
                         ->title('Motivo de Descarga')
-                        ->placeholder('Ej. Devolución por fin de labores, mal estado, etc.')
+                        ->placeholder('Ej. Devolución por fin de labores, traslado, etc.')
                         ->required()
                         ->maxlength(100),
                 ]),
             ])->async('asyncDischargeData')
               ->title('Registrar Descargo de Bien')
               ->applyButton('Confirmar Descargo'),
+
+            // Modal para descargo por mal estado (botón amarillo)
+            Layout::modal('dischargeBadConditionModal', [
+                Layout::rows([
+                    Input::make('discharge_asset_id')->type('hidden'),
+                    Input::make('observation')
+                        ->title('Motivo de Descarga por Mal Estado')
+                        ->placeholder('Ej. Equipo dañado, deterioro por uso, etc.')
+                        ->required()
+                        ->maxlength(100)
+                        ->help('El bien será descargado del funcionario actual y asignado en una tarjeta de mal estado a nombre del encargado de activos fijos.'),
+                ]),
+            ])->async('asyncDischargeData')
+              ->title('Descargar Bien por Mal Estado')
+              ->applyButton('Confirmar Descargo por Mal Estado'),
         ];
     }
 
@@ -148,6 +166,54 @@ class CivilServantKardexScreen extends Screen
         ];
     }
 
+    /**
+     * Genera el siguiente código de asignación correlativo para un funcionario específico.
+     * Busca la última tarjeta de ese funcionario (independientemente del tipo) e incrementa.
+     * Si se especifica tipo, verifica unicidad solo dentro de ese tipo para el funcionario.
+     * 
+     * @param int $civilServantId ID del funcionario
+     * @param string|null $type Tipo de tarjeta (null = cualquiera, 'descargo', 'mal_estado', etc.)
+     */
+    private function generateNextAssignmentCodeForServant(int $civilServantId, ?string $type = null): string
+    {
+        // 1. Buscar la ÚLTIMA tarjeta de este funcionario (de cualquier tipo)
+        $lastCardOfServant = ResponsabilityCard::where('civil_servant_id', $civilServantId)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $newCode = '1';
+        if ($lastCardOfServant && $lastCardOfServant->assignment_code) {
+            preg_match('/\d+/', $lastCardOfServant->assignment_code, $matches);
+            if (!empty($matches)) {
+                $newCode = (string) (((int) $matches[0]) + 1);
+            } else {
+                $newCode = $lastCardOfServant->assignment_code;
+                $newCode++;
+            }
+        }
+
+        // 2. Verificar que el código no esté duplicado
+        // Si se especificó tipo, comprobar solo dentro del mismo funcionario y tipo
+        // En caso contrario, comprobar globalmente
+        if ($type !== null) {
+            while (ResponsabilityCard::where('civil_servant_id', $civilServantId)
+                ->where('type', $type)
+                ->where('assignment_code', $newCode)
+                ->exists()) {
+                $newCode = (string) (((int) $newCode) + 1);
+            }
+        } else {
+            while (ResponsabilityCard::where('assignment_code', $newCode)->exists()) {
+                $newCode = (string) (((int) $newCode) + 1);
+            }
+        }
+
+        return $newCode;
+    }
+
+    /**
+     * Descargo normal: el bien pasa a estado DISPONIBLE.
+     */
     public function dischargeAsset(CivilServant $civilServant, Request $request)
     {
         $request->validate([
@@ -157,45 +223,119 @@ class CivilServantKardexScreen extends Screen
 
         $asset = Asset::findOrFail($request->input('discharge_asset_id'));
 
-        $lastCard = ResponsabilityCard::orderBy('id', 'desc')->first();
-        $newCode = '1';
-        if ($lastCard && $lastCard->assignment_code) {
-            // Extraer el número más grande o incrementar si es mixto
-            preg_match('/\d+/', $lastCard->assignment_code, $matches);
-            if (!empty($matches)) {
-                $newCode = (string) (((int) $matches[0]) + 1);
-            } else {
-                $newCode = $lastCard->assignment_code;
-                $newCode++;
-            }
-        }
+        $result = DB::transaction(function () use ($civilServant, $asset, $request) {
+            $newCode = $this->generateNextAssignmentCodeForServant($civilServant->id, 'descargo');
 
-        // Verifica si el código autogenerado ya existe (por seguridad)
-        while(ResponsabilityCard::where('assignment_code', $newCode)->exists()) {
-            $newCode = (string) (((int) $newCode) + 1);
-        }
+            $card = ResponsabilityCard::create([
+                'civil_servant_id' => $civilServant->id,
+                'assign_name' => $civilServant->name,
+                'role' => $civilServant->position?->name ?? 'Sin Puesto',
+                'assignment_code' => $newCode,
+                'type' => 'descargo',
+                'assign_date' => now(),
+                'update_date' => now(),
+            ]);
 
-        $card = ResponsabilityCard::create([
-            'civil_servant_id' => $civilServant->id,
-            'assign_name' => $civilServant->name,
-            'role' => $civilServant->position?->name ?? 'Sin Puesto',
-            'assignment_code' => $newCode,
-            'type' => 'descargo',
-            'assign_date' => now(),
-            'update_date' => now(),
+            Assignment::create([
+                'responsability_card_id' => $card->id,
+                'asset_id' => $asset->id,
+                'observation' => $request->input('observation'),
+                'date' => now(),
+            ]);
+
+            $asset->state = 'DISPONIBLE';
+            $asset->save();
+
+            return $newCode;
+        });
+
+        Toast::info('El bien ha sido descargado exitosamente. Se ha generado la Constancia de Descargo ' . $result . '.');
+
+        return redirect()->route('platform.civil_servant.kardex', $civilServant->id);
+    }
+
+    /**
+     * Descargo por mal estado: el bien se descarga del funcionario actual y se asigna
+     * a una tarjeta de mal estado a nombre del encargado de activos fijos (usuario en sesión).
+     */
+    public function dischargeAssetBadCondition(CivilServant $civilServant, Request $request)
+    {
+        $request->validate([
+            'discharge_asset_id' => 'required|exists:assets,id',
+            'observation' => 'required|string|max:100',
         ]);
 
-        Assignment::create([
-            'responsability_card_id' => $card->id,
-            'asset_id' => $asset->id,
-            'observation' => $request->input('observation'),
-            'date' => now(),
-        ]);
+        // Buscar el funcionario correspondiente al usuario autenticado
+        $currentUser = $request->user();
+        $encargado = CivilServant::where('name', $currentUser->name)->first();
 
-        $asset->state = 'DISPONIBLE';
-        $asset->save();
+        if (!$encargado) {
+            throw ValidationException::withMessages([
+                'observation' => 'No se encontró un registro de funcionario con el nombre "' . $currentUser->name . '". El administrador debe crear el funcionario correspondiente al usuario encargado de activos fijos antes de poder realizar esta operación.',
+            ]);
+        }
 
-        Toast::info('El bien ha sido descargado exitosamente. Se ha generado la Constancia de Descargo ' . $newCode . '.');
+        $asset = Asset::findOrFail($request->input('discharge_asset_id'));
+
+        $result = DB::transaction(function () use ($civilServant, $encargado, $asset, $request) {
+            // 1. Generar tarjeta de descargo para el funcionario original (filtrando solo por tipo 'descargo')
+            $descargoCode = $this->generateNextAssignmentCodeForServant($civilServant->id, 'descargo');
+
+            $descargoCard = ResponsabilityCard::create([
+                'civil_servant_id' => $civilServant->id,
+                'assign_name' => $civilServant->name,
+                'role' => $civilServant->position?->name ?? 'Sin Puesto',
+                'assignment_code' => $descargoCode,
+                'type' => 'descargo',
+                'assign_date' => now(),
+                'update_date' => now(),
+            ]);
+
+            Assignment::create([
+                'responsability_card_id' => $descargoCard->id,
+                'asset_id' => $asset->id,
+                'observation' => $request->input('observation'),
+                'date' => now(),
+            ]);
+
+            // 2. Cambiar el estado del bien a EN MAL ESTADO
+            $asset->state = 'EN MAL ESTADO';
+            $asset->save();
+
+            // 3. Generar tarjeta de mal estado para el encargado de activos fijos (filtrando solo por tipo 'mal_estado')
+            $encargado->load('position');
+            $malEstadoCode = $this->generateNextAssignmentCodeForServant($encargado->id, 'mal_estado');
+
+            $malEstadoCard = ResponsabilityCard::create([
+                'civil_servant_id' => $encargado->id,
+                'assign_name' => $encargado->name,
+                'role' => $encargado->position?->name ?? 'Sin Puesto',
+                'assignment_code' => $malEstadoCode,
+                'type' => 'mal_estado',
+                'assign_date' => now(),
+                'update_date' => now(),
+            ]);
+
+            // 4. Asignar el bien a la nueva tarjeta de mal estado
+            Assignment::create([
+                'responsability_card_id' => $malEstadoCard->id,
+                'asset_id' => $asset->id,
+                'observation' => $request->input('observation'),
+                'date' => now(),
+            ]);
+
+            return [
+                'descargoCode' => $descargoCode,
+                'malEstadoCode' => $malEstadoCode,
+                'encargadoName' => $encargado->name,
+            ];
+        });
+
+        Toast::info(
+            'Bien descargado por mal estado. Constancia de Descargo No. ' . $result['descargoCode'] .
+            ' generada. Tarjeta de Mal Estado No. ' . $result['malEstadoCode'] .
+            ' asignada a ' . $result['encargadoName'] . '.'
+        );
 
         return redirect()->route('platform.civil_servant.kardex', $civilServant->id);
     }

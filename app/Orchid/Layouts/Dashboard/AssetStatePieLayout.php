@@ -30,6 +30,13 @@ class AssetStatePieLayout extends Chart
     protected $target = 'assetStateChart';
 
     /**
+     * Colors: Azul (Asignados), Verde (Disponibles), Amarillo (En Mal Estado), Gris (Otros).
+     *
+     * @var array
+     */
+    protected $colors = ['#0d6efd', '#198754', '#ffc107', '#6c757d'];
+
+    /**
      * Determines whether to display the export button.
      *
      * @var bool

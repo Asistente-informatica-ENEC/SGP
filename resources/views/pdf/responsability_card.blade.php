@@ -173,9 +173,9 @@
                 <td>{{ $asset->sicoin }}</td>
                 <td>1</td>
                 <td class="text-left" style="white-space: pre-wrap;">{{ $asset->description }}</td>
-                <td>{{ !$isDescargo ? number_format((float)$asset->value, 2, '.', '') : '' }}</td>
-                <td>{{ $isDescargo ? number_format((float)$asset->value, 2, '.', '') : '' }}</td>
-                <td>{{ number_format((float)$asset->value, 2, '.', '') }}</td>
+                <td>{{ !$isDescargo ? 'Q. ' . number_format((float)$asset->value, 2, '.', '') : '' }}</td>
+                <td>{{ $isDescargo ? 'Q. ' . number_format((float)$asset->value, 2, '.', '') : '' }}</td>
+                <td>Q. {{ number_format((float)$asset->value, 2, '.', '') }}</td>
                 <td>{{ $assignment->observation }}</td>
             </tr>
             @endif

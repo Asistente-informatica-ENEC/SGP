@@ -17,43 +17,59 @@ class PlatformScreen extends Screen
      */
     public function query(): iterable
     {
-        // 1. Chart Data: Tarjetas de Responsabilidad (Últimos 7 días)
-        $cardsByDay = \App\Models\ResponsabilityCard::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+        // 1. Chart Data: Tarjetas de Responsabilidad (Últimos 7 días) — separadas por tipo
+        $normalCardsByDay = \App\Models\ResponsabilityCard::selectRaw('DATE(created_at) as date, COUNT(*) as count')
             ->where('created_at', '>=', now()->subDays(6)->startOfDay())
+            ->where('type', '!=', 'mal_estado')
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->pluck('count', 'date');
+
+        $badConditionCardsByDay = \App\Models\ResponsabilityCard::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', now()->subDays(6)->startOfDay())
+            ->where('type', 'mal_estado')
             ->groupBy('date')
             ->orderBy('date', 'asc')
             ->get()
             ->pluck('count', 'date');
 
         $chartLabels = [];
-        $chartValues = [];
+        $normalValues = [];
+        $badConditionValues = [];
 
         // Asegurar que haya 7 días incluso si no hay registros
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
             $chartLabels[] = now()->subDays($i)->format('d M');
-            $chartValues[] = $cardsByDay->get($date, 0);
+            $normalValues[] = $normalCardsByDay->get($date, 0);
+            $badConditionValues[] = $badConditionCardsByDay->get($date, 0);
         }
 
         $cardsChart = [
             [
                 'name' => 'Tarjetas Emitidas',
-                'values' => $chartValues,
+                'values' => $normalValues,
                 'labels' => $chartLabels,
-            ]
+            ],
+            [
+                'name' => 'Tarjetas de Mal Estado',
+                'values' => $badConditionValues,
+                'labels' => $chartLabels,
+            ],
         ];
 
-        // 2. Pie Data: Estado de los Bienes
+        // 2. Pie Data: Estado de los Bienes — con "En Mal Estado" separado
         $assignedAssets = \App\Models\Asset::where('state', 'ASIGNADO')->count();
         $availableAssets = \App\Models\Asset::where('state', 'DISPONIBLE')->count();
-        // Incluimos otros estados si existen (ej. DE BAJA), si no, sólo los 2 principales
-        $otherAssets = \App\Models\Asset::whereNotIn('state', ['ASIGNADO', 'DISPONIBLE'])->count();
+        $badConditionAssets = \App\Models\Asset::where('state', 'EN MAL ESTADO')->count();
+        $otherAssets = \App\Models\Asset::whereNotIn('state', ['ASIGNADO', 'DISPONIBLE', 'EN MAL ESTADO'])->count();
 
         $assetStateChart = [
             [
                 'name' => 'Estados',
-                'values' => [$assignedAssets, $availableAssets, $otherAssets],
-                'labels' => ['Asignados', 'Disponibles', 'Otros (Baja/Mantenimiento)'],
+                'values' => [$assignedAssets, $availableAssets, $badConditionAssets, $otherAssets],
+                'labels' => ['Asignados', 'Disponibles', 'En Mal Estado', 'Otros (Baja/Sustraído)'],
             ]
         ];
 
