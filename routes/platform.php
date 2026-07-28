@@ -202,11 +202,11 @@ Route::screen('responsability_cards/create', ResponsabilityCardEditScreen::class
         ->push('Crear', route('platform.responsability_card.create')));
 
 // Platform > Reportes
-Route::screen('reports', \App\Orchid\Screens\Report\ReportListScreen::class)
+Route::screen('reports', \App\Orchid\Screens\Report\ReportBuilderScreen::class)
     ->name('platform.report.list')
     ->breadcrumbs(fn (Trail $trail) => $trail
         ->parent('platform.index')
-        ->push('Módulo de Reportes', route('platform.report.list')));
+        ->push('Constructor de Reportes', route('platform.report.list')));
 
 // Platform > Bienes en Mal Estado
 Route::screen('bad_condition_cards', \App\Orchid\Screens\BadConditionCard\BadConditionCardListScreen::class)
