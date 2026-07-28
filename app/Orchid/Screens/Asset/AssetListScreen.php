@@ -53,19 +53,19 @@ class AssetListScreen extends Screen
             \Orchid\Screen\Actions\DropDown::make('Descargo de bienes')
                 ->icon('bs.download')
                 ->list([
-                    \Orchid\Screen\Actions\ModalToggle::make('Descargar Seleccionados')
+                    \Orchid\Screen\Actions\ModalToggle::make('Devolver a Disponible')
                         ->icon('bs.download')
                         ->modal('batchDischargeNormalModal')
                         ->method('batchDischargeNormal')
                         ->id('batch-discharge-normal-btn')
-                        ->title('Descarga normal (DISPONIBLE)'),
+                        ->title('Descarga a Disponible'),
 
-                    \Orchid\Screen\Actions\ModalToggle::make('Descargar Mal Estado')
+                    \Orchid\Screen\Actions\ModalToggle::make('Registrar Mal Estado')
                         ->icon('bs.exclamation-triangle')
                         ->modal('batchDischargeBadConditionModal')
                         ->method('batchDischargeBadCondition')
                         ->id('batch-discharge-bad-condition-btn')
-                        ->title('Descarga en mal estado'),
+                        ->title('Descarga por Mal Estado'),
                 ]),
 
             \Orchid\Screen\Actions\DropDown::make('Acciones')
@@ -382,11 +382,11 @@ class AssetListScreen extends Screen
                     $parts[] = "Descargo No. {$dc['code']} para {$dc['servant']}";
                 }
             }
-            $message = 'Descarga normal procesada correctamente. ' . implode('. ', $parts) . '.';
+            $message = 'Descarga a disponible procesada correctamente. ' . implode('. ', $parts) . '.';
             Alert::success($message);
         } catch (\Exception $e) {
             Log::error('Error in batchDischargeNormal', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            Alert::error('Error al procesar descarga normal: ' . $e->getMessage());
+            Alert::error('Error al procesar descarga a disponible: ' . $e->getMessage());
         }
 
         return redirect()->route('platform.asset.list');
@@ -452,11 +452,11 @@ class AssetListScreen extends Screen
                 $codes = implode(', ', $result['malEstadoCodes']);
                 $parts[] = "Tarjeta(s) de Mal Estado No. {$codes} para {$result['encargado']}";
             }
-            $message = 'Descarga en mal estado procesada correctamente. ' . implode('. ', $parts) . '.';
+            $message = 'Descarga por mal estado procesada correctamente. ' . implode('. ', $parts) . '.';
             Alert::success($message);
         } catch (\Exception $e) {
             Log::error('Error in batchDischargeBadCondition', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            Alert::error('Error al procesar descarga en mal estado: ' . $e->getMessage());
+            Alert::error('Error al procesar descarga por mal estado: ' . $e->getMessage());
         }
 
         return redirect()->route('platform.asset.list');

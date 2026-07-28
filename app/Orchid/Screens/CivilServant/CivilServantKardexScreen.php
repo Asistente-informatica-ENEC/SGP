@@ -208,7 +208,7 @@ class CivilServantKardexScreen extends Screen
     }
 
     /**
-     * Descargo normal: el bien pasa a estado DISPONIBLE.
+     * Descarga a disponible: el bien pasa a estado DISPONIBLE.
      */
     public function dischargeAsset(CivilServant $civilServant, Request $request)
     {
@@ -251,7 +251,7 @@ class CivilServantKardexScreen extends Screen
     }
 
     /**
-     * Descargo por mal estado: el bien se descarga del funcionario actual y se asigna
+     * Descarga por mal estado: el bien se descarga del funcionario actual y se asigna
      * a una tarjeta de mal estado a nombre del encargado de activos fijos (usuario en sesión).
      */
     public function dischargeAssetBadCondition(CivilServant $civilServant, Request $request)

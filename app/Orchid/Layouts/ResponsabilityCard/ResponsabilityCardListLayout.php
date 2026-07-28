@@ -61,7 +61,7 @@ class ResponsabilityCardListLayout extends Table
                             ->route('platform.responsability_card.edit', [$card])
                             ->icon('bs.pencil'),
 
-                        Button::make('Emitir Excel')
+                        Button::make('Exportar Excel')
                             ->icon('bs.file-earmark-excel')
                             ->method('exportExcel', [
                                 'card' => $card->id,

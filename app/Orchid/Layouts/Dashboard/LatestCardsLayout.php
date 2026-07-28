@@ -57,7 +57,7 @@ class LatestCardsLayout extends Table
                                 ->rawClick()
                                 ->set('formtarget', '_blank'),
 
-                            Button::make('Emitir Excel')
+                            Button::make('Exportar Excel')
                                 ->icon('bs.file-earmark-excel')
                                 ->method('exportExcel')
                                 ->parameters(['card' => $card->id])

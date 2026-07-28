@@ -117,7 +117,7 @@ class BadConditionCardListScreen extends Screen
 
             Layout::modal('modalBadConditionCard', [
                 Layout::rows([
-                    \Orchid\Screen\Actions\Button::make('Emitir Tarjeta (Excel)')
+                    \Orchid\Screen\Actions\Button::make('Exportar Tarjeta (Excel)')
                         ->icon('bs.file-earmark-excel')
                         ->method('exportExcel')
                         ->parameters([
